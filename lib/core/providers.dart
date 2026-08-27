@@ -1,0 +1,29 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/models/auth_user.dart';
+import '../data/repositories/auth_repository.dart';
+import '../data/repositories/config_repository.dart';
+import '../data/repositories/news_repository.dart';
+import 'auth/auth_controller.dart';
+import 'network/api_client.dart';
+import 'storage/token_storage.dart';
+
+/// Root dependency-injection providers — everything else in the app reads
+/// its dependencies through these rather than constructing them directly.
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+final newsRepositoryProvider = Provider<NewsRepository>(
+  (ref) => NewsRepository(ref.watch(apiClientProvider)),
+);
+
+final tokenStorageProvider = Provider<TokenStorage>((ref) => TokenStorage());
+
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(ref.watch(apiClientProvider)),
+);
+
+final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(AuthController.new);
+
+final configRepositoryProvider = Provider<ConfigRepository>(
+  (ref) => ConfigRepository(ref.watch(apiClientProvider)),
+);
