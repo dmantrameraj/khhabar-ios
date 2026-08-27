@@ -1,0 +1,28 @@
+workflows:
+  ios-simulator-build:
+    name: iOS Simulator Build (no signing required)
+    # First-pass workflow: proves the Dart/Flutter code actually compiles
+    # for iOS before committing to an Apple Developer account ($99/year).
+    # A simulator build needs no signing certificate, no provisioning
+    # profile, and no App Store Connect access — just the Flutter SDK.
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build iOS Simulator app
+        script: flutter build ios --simulator --debug
+    artifacts:
+      - build/ios/iphonesimulator/*.app
+
+  # android-debug-build:
+  #   Uncomment once you also want Android builds running through
+  #   Codemagic instead of locally — not necessary right now since the
+  #   local Android build already works.
+  #
+  # ios-device-build:
+  #   Add once there's an Apple Developer account: Codemagic can manage
+  #   signing certificates/provisioning profiles automatically via
+  #   `integrations: app_store_connect: ...` — ask for this once ready.
