@@ -1,5 +1,25 @@
 import 'news_article.dart';
 
+/// Admin-curated hero image carousel (website's Admin -> Sliders).
+/// [link] may point at an internal article (extractArticleSlug() picks
+/// that out) or an arbitrary external URL — SliderSection decides which
+/// at tap time.
+class SliderItem {
+  final int id;
+  final String? title;
+  final String imageUrl;
+  final String? link;
+
+  SliderItem({required this.id, this.title, required this.imageUrl, this.link});
+
+  factory SliderItem.fromJson(Map<String, dynamic> json) => SliderItem(
+        id: json['id'] as int,
+        title: json['title'] as String?,
+        imageUrl: json['image'] as String? ?? '',
+        link: json['link'] as String?,
+      );
+}
+
 class LiveUpdateItem {
   final int id;
   final String message;
@@ -42,6 +62,7 @@ class CategoryTile {
 
 /// Everything GET /home returns in one call — see api-documentation.md.
 class HomeFeed {
+  final List<SliderItem> sliders;
   final NewsArticle? hero;
   final List<NewsArticle> latest;
   final List<NewsArticle> trending;
@@ -49,6 +70,7 @@ class HomeFeed {
   final List<LiveUpdateItem> liveUpdates;
 
   HomeFeed({
+    required this.sliders,
     required this.hero,
     required this.latest,
     required this.trending,
@@ -57,6 +79,9 @@ class HomeFeed {
   });
 
   factory HomeFeed.fromJson(Map<String, dynamic> json) => HomeFeed(
+        sliders: (json['sliders'] as List? ?? const [])
+            .map((e) => SliderItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
         hero: json['hero'] != null ? NewsArticle.fromJson(json['hero'] as Map<String, dynamic>) : null,
         latest: (json['latest'] as List).map((e) => NewsArticle.fromJson(e as Map<String, dynamic>)).toList(),
         trending: (json['trending'] as List).map((e) => NewsArticle.fromJson(e as Map<String, dynamic>)).toList(),

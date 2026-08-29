@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/home_feed.dart';
 import '../../data/repositories/location_repository.dart';
 import '../../widgets/news_card.dart';
+import '../../widgets/slider_section.dart';
 import '../article/article_screen.dart';
 import '../categories/category_detail_screen.dart';
 
@@ -198,6 +199,7 @@ class _HomeContent extends StatelessWidget {
 
     return ListView(
       children: [
+        if (feed.sliders.isNotEmpty) SliderSection(sliders: feed.sliders),
         if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => _openArticle(context, feed.hero!.slug)),
         if (feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
         if (feed.trending.isNotEmpty)

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/network/api_client.dart';
@@ -134,7 +135,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
               onPressed: _toggleBookmark,
             ),
             IconButton(
-              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366)),
               tooltip: 'WhatsApp पर शेयर करें',
               onPressed: () => shareToWhatsApp(articleShareText(_detail!.article.title, _detail!.article.slug)),
             ),

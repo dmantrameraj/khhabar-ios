@@ -23,6 +23,11 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Ads are built and wired but turned off for now (AdConfig.adsEnabled)
+    // — held back for a later add-on pass rather than removed outright.
+    if (!AdConfig.adsEnabled) {
+      return;
+    }
     // google_mobile_ads has no web implementation — this app still needs
     // to run under `flutter run -d web-server` for local verification
     // (no Android emulator in this environment), so this stays a

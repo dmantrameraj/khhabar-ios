@@ -8,6 +8,13 @@
 class AdConfig {
   AdConfig._();
 
+  /// Ads are built and ready but turned off for now, per the user's
+  /// request to hold off on monetization until a later add-on pass.
+  /// Flip to true (and set _useTestAds = false + fill in the real ad
+  /// unit ID below) to turn them back on — no other code changes needed,
+  /// BannerAdWidget and MainShell both already check this flag.
+  static const bool adsEnabled = false;
+
   static const bool _useTestAds = true;
 
   // Google's public sample banner ad unit ID — https://developers.google.com/admob/android/test-ads
