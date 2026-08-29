@@ -2,7 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/utils/whatsapp_share.dart';
 import '../data/models/news_article.dart';
+
+/// WhatsApp's own brand green — close enough to their logo color without
+/// pulling in a brand-asset SVG for a single icon.
+const _whatsappGreen = Color(0xFF25D366);
 
 /// Large hero card — top story on the home screen.
 class NewsHeroCard extends StatelessWidget {
@@ -53,9 +58,23 @@ class NewsHeroCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    '${article.category.name} · ${article.readingTimeMinutes} min read',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${article.category.name} · ${article.readingTimeMinutes} min read',
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
+                        child: const Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Icon(Icons.chat, color: _whatsappGreen, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -109,6 +128,11 @@ class NewsListTile extends StatelessWidget {
         subtitle: Text(
           '${article.category.name} · ${article.author.name}',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.chat, color: _whatsappGreen, size: 22),
+          tooltip: 'WhatsApp पर शेयर करें',
+          onPressed: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
         ),
       ),
     );

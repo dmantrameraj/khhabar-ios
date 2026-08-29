@@ -8,6 +8,7 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/whatsapp_share.dart';
 import '../../data/models/article_detail.dart';
 import '../../widgets/news_card.dart';
 import '../auth/login_screen.dart';
@@ -133,10 +134,14 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
               onPressed: _toggleBookmark,
             ),
             IconButton(
+              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              tooltip: 'WhatsApp पर शेयर करें',
+              onPressed: () => shareToWhatsApp(articleShareText(_detail!.article.title, _detail!.article.slug)),
+            ),
+            IconButton(
               icon: const Icon(Icons.share),
-              onPressed: () => Share.share(
-                '${_detail!.article.title}\n\nhttps://khhabar.com/news/${_detail!.article.slug}',
-              ),
+              tooltip: 'और शेयर विकल्प',
+              onPressed: () => Share.share(articleShareText(_detail!.article.title, _detail!.article.slug)),
             ),
           ],
         ],
