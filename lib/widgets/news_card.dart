@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/whatsapp_share.dart';
@@ -74,6 +75,14 @@ class NewsHeroCard extends StatelessWidget {
                           child: FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 20),
                         ),
                       ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => Share.share(articleShareText(article.title, article.slug)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Icons.share, color: Colors.grey.shade700, size: 18),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -129,10 +138,20 @@ class NewsListTile extends StatelessWidget {
           '${article.category.name} · ${article.author.name}',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
-        trailing: IconButton(
-          icon: const FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 24),
-          tooltip: 'WhatsApp पर शेयर करें',
-          onPressed: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 22),
+              tooltip: 'WhatsApp पर शेयर करें',
+              onPressed: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
+            ),
+            IconButton(
+              icon: Icon(Icons.share, color: Colors.grey.shade700, size: 20),
+              tooltip: 'और शेयर विकल्प',
+              onPressed: () => Share.share(articleShareText(article.title, article.slug)),
+            ),
+          ],
         ),
       ),
     );
