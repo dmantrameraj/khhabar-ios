@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required at runtime, not just for the Flutter dev tool's debug
+         connection — every real feature (the API, images, AdMob,
+         OneSignal, App Links resolution) needs actual internet access.
+         The debug-variant manifest (src/debug/AndroidManifest.xml) also
+         declares this, but that override does NOT apply to release
+         builds — leaving it out here meant release builds had zero
+         network access at all. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="khhabar_app"
         android:name="${applicationName}"
