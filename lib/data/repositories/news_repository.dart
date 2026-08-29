@@ -15,16 +15,24 @@ class NewsRepository {
 
   NewsRepository(this._client);
 
-  Future<HomeFeed> getHome({String? lang}) async {
-    final (data, _) = await _client.get('home', query: lang != null ? {'lang': lang} : null);
+  /// [stateId] filters the 'latest' section to one state's articles (see
+  /// ApiController::stateId() on the backend) — hero/trending/categories
+  /// stay unfiltered, matching the reference behavior of location chips
+  /// filtering the main feed list, not the whole home screen.
+  Future<HomeFeed> getHome({String? lang, int? stateId}) async {
+    final (data, _) = await _client.get('home', query: {
+      if (lang != null) 'lang': lang,
+      if (stateId != null) 'state_id': stateId,
+    });
     return HomeFeed.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<PaginatedResult<NewsArticle>> getNews({int page = 1, int? categoryId, String? lang}) async {
+  Future<PaginatedResult<NewsArticle>> getNews({int page = 1, int? categoryId, String? lang, int? stateId}) async {
     final (data, meta) = await _client.get('news', query: {
       'page': page,
       if (categoryId != null) 'category_id': categoryId,
       if (lang != null) 'lang': lang,
+      if (stateId != null) 'state_id': stateId,
     });
     return _paginatedArticles(data, meta);
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/auth_user.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/config_repository.dart';
+import '../data/repositories/location_repository.dart';
 import '../data/repositories/news_repository.dart';
 import 'auth/auth_controller.dart';
 import 'network/api_client.dart';
@@ -27,3 +28,12 @@ final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(
 final configRepositoryProvider = Provider<ConfigRepository>(
   (ref) => ConfigRepository(ref.watch(apiClientProvider)),
 );
+
+final locationRepositoryProvider = Provider<LocationRepository>(
+  (ref) => LocationRepository(ref.watch(apiClientProvider)),
+);
+
+/// The reader's chosen state filter for the Home feed — null means
+/// unfiltered ("All India"). In-memory only for now (resets on app
+/// restart); not worth persisting until this feature proves itself.
+final selectedStateProvider = StateProvider<StateOption?>((ref) => null);
