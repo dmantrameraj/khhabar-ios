@@ -9,7 +9,14 @@ import '../../widgets/news_card.dart';
 import '../article/article_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  /// Pre-fills and immediately runs a search — used when arriving from a
+  /// tappable tag chip (ArticleScreen) rather than the Search tab itself.
+  /// GET /search already matches against tag names as part of its own
+  /// query (see NewsModel::search()'s tag-name LIKE fallback), so tapping
+  /// a tag needs no new backend endpoint — just this entry point.
+  final String? initialQuery;
+
+  const SearchScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -22,6 +29,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _loading = false;
   bool _searched = false;
   Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialQuery?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _controller.text = initial;
+      _runSearch(initial);
+    }
+  }
 
   @override
   void dispose() {

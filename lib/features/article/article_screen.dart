@@ -13,6 +13,7 @@ import '../../core/utils/whatsapp_share.dart';
 import '../../data/models/article_detail.dart';
 import '../../widgets/news_card.dart';
 import '../auth/login_screen.dart';
+import '../search/search_screen.dart';
 import 'comments_section.dart';
 
 final articleProvider = FutureProvider.family<ArticleDetail, String>((ref, slug) {
@@ -253,7 +254,16 @@ class _ArticleContent extends StatelessWidget {
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 6,
-                  children: detail.tags.map((t) => Chip(label: Text(t))).toList(),
+                  children: detail.tags
+                      .map(
+                        (t) => ActionChip(
+                          label: Text(t),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: t)),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ],

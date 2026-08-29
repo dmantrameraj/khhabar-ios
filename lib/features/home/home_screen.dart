@@ -201,6 +201,7 @@ class _HomeContent extends StatelessWidget {
       children: [
         if (feed.sliders.isNotEmpty) SliderSection(sliders: feed.sliders),
         if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => _openArticle(context, feed.hero!.slug)),
+        if (feed.liveUpdates.isNotEmpty) _LiveUpdatesCard(updates: feed.liveUpdates),
         if (feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
         if (feed.trending.isNotEmpty)
           SizedBox(
@@ -245,6 +246,65 @@ class _HomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// Editor-posted live updates (short, timestamped notes — election
+/// results ticking in, a developing story, etc.) — fetched by GET /home
+/// already, just never had anywhere to render before this.
+class _LiveUpdatesCard extends StatelessWidget {
+  final List<LiveUpdateItem> updates;
+
+  const _LiveUpdatesCard({required this.updates});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      color: AppTheme.navy,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'लाइव अपडेट्स',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...updates.take(5).map(
+                  (u) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(u.message, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        if (u.postedBy != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              u.postedBy!,
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
     );
   }
 }
