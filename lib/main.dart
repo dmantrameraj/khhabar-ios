@@ -8,15 +8,20 @@ import 'core/push/push_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/shell/main_shell.dart';
 
-void main() {
-  // Fire-and-forget: readies the AdMob SDK so BannerAdWidget's first load
-  // request doesn't have to wait on it. google_mobile_ads only ships
-  // Android/iOS platform implementations (no web) — guarded so this app
-  // still runs under `flutter run -d web-server`, which is how this
-  // project verifies changes locally (no Android emulator in this
-  // environment). BannerAdWidget carries the matching kIsWeb guard.
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Awaited, not fire-and-forget: BannerAdWidget lives in the very first
+  // frame (inside MainShell), so if it started requesting an ad before
+  // the native AdMob SDK finished initializing, that race could throw
+  // before anything ever painted — this makes sure the SDK is ready
+  // first. google_mobile_ads only ships Android/iOS platform
+  // implementations (no web) — guarded so this app still runs under
+  // `flutter run -d web-server`, which is how this project verifies
+  // changes locally (no Android emulator in this environment).
+  // BannerAdWidget carries the matching kIsWeb guard.
   if (!kIsWeb) {
-    MobileAds.instance.initialize();
+    await MobileAds.instance.initialize();
   }
 
   // An explicit, shared ProviderContainer (rather than a plain

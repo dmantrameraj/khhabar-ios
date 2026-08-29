@@ -41,28 +41,36 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 
   Future<void> _loadAd() async {
-    final width = MediaQuery.sizeOf(context).width.truncate();
-    final size = await AdSize.getLargeAnchoredAdaptiveBannerAdSizeWithOrientation(Orientation.portrait, width);
-    if (size == null || !mounted) {
-      return;
-    }
+    // Never let anything in here reach an uncaught exception — an ad
+    // slot is expendable; the rest of the app is not. Defensive on
+    // purpose: this whole widget sits in the very first frame (inside
+    // MainShell), so a crash here would take the whole app down with it.
+    try {
+      final width = MediaQuery.sizeOf(context).width.truncate();
+      final size = await AdSize.getLargeAnchoredAdaptiveBannerAdSizeWithOrientation(Orientation.portrait, width);
+      if (size == null || !mounted) {
+        return;
+      }
 
-    final ad = BannerAd(
-      adUnitId: AdConfig.bannerAdUnitId,
-      size: size,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) {
-            setState(() => _bannerAd = ad as BannerAd);
-          }
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-        },
-      ),
-    );
-    ad.load();
+      final ad = BannerAd(
+        adUnitId: AdConfig.bannerAdUnitId,
+        size: size,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (mounted) {
+              setState(() => _bannerAd = ad as BannerAd);
+            }
+          },
+          onAdFailedToLoad: (ad, error) {
+            ad.dispose();
+          },
+        ),
+      );
+      ad.load();
+    } catch (_) {
+      // Ad SDK not ready / not available on this device — no ad shown, app continues normally.
+    }
   }
 
   @override
