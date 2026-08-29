@@ -47,7 +47,7 @@ dependencies:
   onesignal_flutter: ^5.2.7 # push notifications — same OneSignal account the website already uses (Admin -> Push Notifications)
   app_links: ^6.3.2 # Android App Links / iOS Universal Links — khhabar.com/news/{slug} opens straight into the app
   google_mobile_ads: ^9.1.0 # AdMob banner ads — separate revenue channel from the website's own self-served ad system
-  font_awesome_flutter: ^10.8.0 # real WhatsApp brand icon for the share buttons (Material Icons has no brand glyphs)
+  font_awesome_flutter: ^11.0.0 # real WhatsApp brand icon for the share buttons (Material Icons has no brand glyphs)
 
 dev_dependencies:
   flutter_test:
