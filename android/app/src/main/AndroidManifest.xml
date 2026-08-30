@@ -8,7 +8,7 @@
          network access at all. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="khhabar_app"
+        android:label="Khhabar"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
