@@ -46,24 +46,38 @@ class PushService {
 
     _initialized = true;
 
-    await OneSignal.initialize(config.oneSignalAppId!);
-    await OneSignal.Notifications.requestPermission(true);
+    // Defensive on purpose, matching BannerAdWidget's posture: this runs
+    // fire-and-forget from main() (never awaited), so an uncaught
+    // exception here wouldn't crash the app, but it would silently kill
+    // push for the rest of the session with nothing surfaced anywhere.
+    // Confirmed via a live run that the OneSignal web platform channel
+    // throws MissingPluginException (web has no native OneSignal
+    // implementation) — harmless there since push isn't expected to work
+    // on web, but the same unguarded call would just as easily swallow a
+    // real Android-side failure (bad App ID, OneSignal outage, etc.).
+    try {
+      await OneSignal.initialize(config.oneSignalAppId!);
+      await OneSignal.Notifications.requestPermission(true);
 
-    OneSignal.Notifications.addClickListener((event) {
-      final slug = _extractArticleSlug(event);
-      if (slug != null) {
-        navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticleScreen(slug: slug)));
+      OneSignal.Notifications.addClickListener((event) {
+        final slug = _extractArticleSlug(event);
+        if (slug != null) {
+          navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticleScreen(slug: slug)));
+        }
+      });
+
+      // Ties this device's OneSignal subscription to the app's own user id
+      // when signed in — lets a future targeted send (e.g. "notify this one
+      // reporter") reach the right device. Reflects whatever the auth state
+      // is right now; AuthController.onLogin()/onLogout() keep it in sync
+      // with every login/logout that happens after this.
+      final authUser = container.read(authControllerProvider).value;
+      if (authUser != null) {
+        await OneSignal.login(authUser.uuid);
       }
-    });
-
-    // Ties this device's OneSignal subscription to the app's own user id
-    // when signed in — lets a future targeted send (e.g. "notify this one
-    // reporter") reach the right device. Reflects whatever the auth state
-    // is right now; AuthController.onLogin()/onLogout() keep it in sync
-    // with every login/logout that happens after this.
-    final authUser = container.read(authControllerProvider).value;
-    if (authUser != null) {
-      await OneSignal.login(authUser.uuid);
+    } catch (_) {
+      // Push just doesn't come up this session — everything else continues normally.
+      _initialized = false;
     }
   }
 

@@ -104,6 +104,22 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seeds _detail as soon as the provider resolves, via a rebuild-safe
+    // setState (ref.listen's callback runs after the build phase, unlike
+    // the `data:` branch of asyncDetail.when() below — mutating _detail
+    // there without setState left the AppBar's action icons (which key
+    // off `_detail != null`) permanently invisible, since the AppBar is
+    // built from the *same* build() call before that assignment lands
+    // and nothing was ever scheduling the follow-up rebuild that would
+    // have picked it up. Confirmed via a live run: like/bookmark/share
+    // never appeared even once real content was loaded and rendered.
+    ref.listen(articleProvider(widget.slug), (previous, next) {
+      next.whenData((d) {
+        if (_detail == null && mounted) {
+          setState(() => _detail = d);
+        }
+      });
+    });
     final asyncDetail = ref.watch(articleProvider(widget.slug));
 
     return Scaffold(
