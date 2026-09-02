@@ -48,6 +48,7 @@ dependencies:
   app_links: ^6.3.2 # Android App Links / iOS Universal Links — khhabar.com/news/{slug} opens straight into the app
   google_mobile_ads: ^9.1.0 # AdMob banner ads — separate revenue channel from the website's own self-served ad system
   font_awesome_flutter: ^11.0.0 # real WhatsApp brand icon for the share buttons (Material Icons has no brand glyphs)
+  image_picker: ^1.1.2 # reporter's "attach a photo" field on the submit-article screen
 
 dev_dependencies:
   flutter_test:
@@ -86,10 +87,12 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # assets/icon/khhabar_logo.png is also the source flutter_launcher_icons
+  # reads at build time (see the config block above) — listing it here too
+  # is what makes the SAME file usable as a normal runtime Image.asset (the
+  # app header logo), not just a launcher-icon source.
+  assets:
+    - assets/icon/khhabar_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

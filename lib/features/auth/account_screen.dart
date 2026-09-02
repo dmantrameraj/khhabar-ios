@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_user.dart';
+import '../reporter/reporter_submissions_screen.dart';
 import 'bookmarks_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -127,6 +128,25 @@ class _SignedInView extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookmarksScreen())),
           ),
         ),
+        // Reporter-only: matches the `news.create` permission the backend
+        // actually enforces (see ReporterApiController) — this check is
+        // just "should the app show the entry point", not a security
+        // boundary, so it's a plain role check rather than a live
+        // permission lookup.
+        if (user.role == 'reporter') ...[
+          const SizedBox(height: 12),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              leading: const Icon(Icons.edit_note),
+              title: const Text('मेरी खबरें'),
+              subtitle: const Text('रिपोर्टर के रूप में खबर भेजें'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReporterSubmissionsScreen())),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: () => _confirmLogout(context, ref),

@@ -1,5 +1,6 @@
 import '../../core/network/api_client.dart';
 import '../models/article_detail.dart';
+import '../models/breaking_item.dart';
 import '../models/category_node.dart';
 import '../models/comment.dart';
 import '../models/home_feed.dart';
@@ -35,6 +36,13 @@ class NewsRepository {
       if (stateId != null) 'state_id': stateId,
     });
     return _paginatedArticles(data, meta);
+  }
+
+  /// Reused as the app's "Alerts" feed (the bell icon on Home) — same
+  /// lightweight title+slug rows the website's breaking-news ticker uses.
+  Future<List<BreakingItem>> getBreaking() async {
+    final (data, _) = await _client.get('news/breaking');
+    return (data as List).map((e) => BreakingItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<ArticleDetail> getArticle(String slug) async {

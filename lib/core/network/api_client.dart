@@ -72,6 +72,27 @@ class ApiClient {
     }
   }
 
+  /// POST with a multipart/form-data body — for the one endpoint that
+  /// takes a file upload (the reporter's article photo). [fields] become
+  /// plain form fields; [file], if given, is attached under [fileField].
+  Future<(dynamic, Map<String, dynamic>)> postMultipart(
+    String path, {
+    required Map<String, dynamic> fields,
+    MultipartFile? file,
+    String fileField = 'featured_image',
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        ...fields,
+        if (file != null) fileField: file,
+      });
+      final response = await _dio.post(path, data: formData, options: _authOptions);
+      return _unwrap(response);
+    } on DioException catch (e) {
+      throw _toApiException(e);
+    }
+  }
+
   (dynamic, Map<String, dynamic>) _unwrap(Response response) {
     final body = response.data as Map<String, dynamic>;
 

@@ -5,6 +5,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/config_repository.dart';
 import '../data/repositories/location_repository.dart';
 import '../data/repositories/news_repository.dart';
+import '../data/repositories/reporter_repository.dart';
 import 'auth/auth_controller.dart';
 import 'network/api_client.dart';
 import 'storage/token_storage.dart';
@@ -31,6 +32,10 @@ final configRepositoryProvider = Provider<ConfigRepository>(
 
 final locationRepositoryProvider = Provider<LocationRepository>(
   (ref) => LocationRepository(ref.watch(apiClientProvider)),
+);
+
+final reporterRepositoryProvider = Provider<ReporterRepository>(
+  (ref) => ReporterRepository(ref.watch(apiClientProvider)),
 );
 
 /// The reader's chosen state filter for the Home feed — null means

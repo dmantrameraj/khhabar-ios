@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/feature_flags.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/models/category_node.dart';
 import '../../data/models/home_feed.dart';
 import '../../data/repositories/location_repository.dart';
+import '../../widgets/category_feed_list.dart';
 import '../../widgets/news_card.dart';
 import '../../widgets/slider_section.dart';
+import '../alerts/alerts_screen.dart';
 import '../article/article_screen.dart';
-import '../categories/category_detail_screen.dart';
 
 final homeFeedProvider = FutureProvider<HomeFeed>((ref) {
   final stateId = ref.watch(selectedStateProvider)?.id;
   return ref.watch(newsRepositoryProvider).getHome(stateId: stateId);
+});
+
+/// Top-level categories shown as swipeable tabs across the top of Home
+/// (होम + each category — swiping the body changes which one is showing,
+/// matching the reference apps). Same list feeds the reporter's category
+/// picker on the submit-article screen.
+final topCategoriesProvider = FutureProvider<List<CategoryNode>>((ref) {
+  return ref.watch(newsRepositoryProvider).getCategories();
 });
 
 class HomeScreen extends ConsumerWidget {
@@ -20,31 +31,52 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final homeFeed = ref.watch(homeFeedProvider);
     final selectedState = ref.watch(selectedStateProvider);
+    // Home's own tab renders as soon as this screen builds; the category
+    // tabs beside it pop in once GET /categories resolves (DefaultTabController
+    // recreates itself when `length` changes) rather than blocking the
+    // whole screen behind a spinner for a row that's secondary to the feed.
+    final categories = ref.watch(topCategoriesProvider).valueOrNull ?? const <CategoryNode>[];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('खबर', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
-        centerTitle: false,
-        actions: [
-          TextButton.icon(
-            onPressed: () => _openLocationPicker(context, ref),
-            icon: const Icon(Icons.location_on_outlined, color: Colors.white, size: 18),
-            label: Text(
-              selectedState?.name ?? 'सभी राज्य',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              overflow: TextOverflow.ellipsis,
+    return DefaultTabController(
+      length: 1 + categories.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Image.asset('assets/icon/khhabar_logo.png', height: 34, fit: BoxFit.contain),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_none),
+              tooltip: 'अलर्ट',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlertsScreen())),
             ),
+            TextButton.icon(
+              onPressed: () => _openLocationPicker(context, ref),
+              icon: const Icon(Icons.location_on_outlined, color: Colors.white, size: 18),
+              label: Text(
+                selectedState?.name ?? 'सभी राज्य',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            indicatorColor: AppTheme.accent,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              const Tab(text: 'होम'),
+              ...categories.map((c) => Tab(text: c.name)),
+            ],
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(homeFeedProvider.future),
-        child: homeFeed.when(
-          data: (feed) => _HomeContent(feed: feed, filteredByState: selectedState?.name),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => AsyncStateView(error: err, onRetry: () => ref.invalidate(homeFeedProvider)),
+        ),
+        body: TabBarView(
+          children: [
+            _HomeFeedTab(filteredByState: selectedState?.name),
+            ...categories.map((c) => CategoryFeedList(slug: c.slug)),
+          ],
         ),
       ),
     );
@@ -179,6 +211,28 @@ class _StatePickerSheetState extends ConsumerState<_StatePickerSheet> {
   }
 }
 
+/// The "होम" tab's content — hero/live-updates/trending/category-chips/
+/// latest, exactly what Home showed before the top category tabs existed.
+class _HomeFeedTab extends ConsumerWidget {
+  final String? filteredByState;
+
+  const _HomeFeedTab({this.filteredByState});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final homeFeed = ref.watch(homeFeedProvider);
+
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(homeFeedProvider.future),
+      child: homeFeed.when(
+        data: (feed) => _HomeContent(feed: feed, filteredByState: filteredByState),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => AsyncStateView(error: err, onRetry: () => ref.invalidate(homeFeedProvider)),
+      ),
+    );
+  }
+}
+
 class _HomeContent extends StatelessWidget {
   final HomeFeed feed;
   final String? filteredByState;
@@ -201,7 +255,7 @@ class _HomeContent extends StatelessWidget {
       children: [
         if (feed.sliders.isNotEmpty) SliderSection(sliders: feed.sliders),
         if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => _openArticle(context, feed.hero!.slug)),
-        if (feed.liveUpdates.isNotEmpty) _LiveUpdatesCard(updates: feed.liveUpdates),
+        if (FeatureFlags.liveUpdatesEnabled && feed.liveUpdates.isNotEmpty) _LiveUpdatesCard(updates: feed.liveUpdates),
         if (feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
         if (feed.trending.isNotEmpty)
           SizedBox(
@@ -213,30 +267,6 @@ class _HomeContent extends StatelessWidget {
               itemBuilder: (context, i) {
                 final a = feed.trending[i];
                 return TrendingCard(article: a, rank: i + 1, onTap: () => _openArticle(context, a.slug));
-              },
-            ),
-          ),
-        if (feed.categories.isNotEmpty) const SectionHeader(title: 'श्रेणी अनुसार खबरें'),
-        if (feed.categories.isNotEmpty)
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              itemCount: feed.categories.length,
-              itemBuilder: (context, i) {
-                final c = feed.categories[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ActionChip(
-                    label: Text(c.name),
-                    backgroundColor: Colors.white,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => CategoryDetailScreen(slug: c.slug, name: c.name)),
-                    ),
-                  ),
-                );
               },
             ),
           ),
@@ -252,7 +282,7 @@ class _HomeContent extends StatelessWidget {
 
 /// Editor-posted live updates (short, timestamped notes — election
 /// results ticking in, a developing story, etc.) — fetched by GET /home
-/// already, just never had anywhere to render before this.
+/// already, gated behind FeatureFlags.liveUpdatesEnabled.
 class _LiveUpdatesCard extends StatelessWidget {
   final List<LiveUpdateItem> updates;
 
