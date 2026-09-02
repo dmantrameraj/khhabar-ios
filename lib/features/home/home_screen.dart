@@ -42,7 +42,19 @@ class HomeScreen extends ConsumerWidget {
       length: 1 + categories.length,
       child: Scaffold(
         appBar: AppBar(
-          title: Image.asset('assets/icon/khhabar_logo.png', height: 34, fit: BoxFit.contain),
+          // Two-tone wordmark ("ख" in the brand accent, "बर" in white) per
+          // the user's reference design — plain styled text rather than an
+          // image, so there's no extra asset to keep in sync with the app
+          // icon and no image ever fails to load in the header.
+          title: const Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'ख', style: TextStyle(color: AppTheme.accent)),
+                TextSpan(text: 'बर', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 26),
+          ),
           centerTitle: true,
           actions: [
             IconButton(
@@ -256,8 +268,8 @@ class _HomeContent extends StatelessWidget {
         if (feed.sliders.isNotEmpty) SliderSection(sliders: feed.sliders),
         if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => _openArticle(context, feed.hero!.slug)),
         if (FeatureFlags.liveUpdatesEnabled && feed.liveUpdates.isNotEmpty) _LiveUpdatesCard(updates: feed.liveUpdates),
-        if (feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
-        if (feed.trending.isNotEmpty)
+        if (FeatureFlags.trendingNewsEnabled && feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
+        if (FeatureFlags.trendingNewsEnabled && feed.trending.isNotEmpty)
           SizedBox(
             height: 64,
             child: ListView.builder(
