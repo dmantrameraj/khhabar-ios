@@ -16,4 +16,10 @@ class FeatureFlags {
   /// trending sidebar). Turned off per request; feed.trending is still
   /// fetched, this only controls whether the section renders.
   static const bool trendingNewsEnabled = false;
+
+  /// The heart/like button on the article page's AppBar. Turned off per
+  /// request — the backend toggle-like endpoint and likes_count are
+  /// untouched (still shown as a read-only count elsewhere, e.g. article
+  /// metadata), this only hides the button a reader would tap.
+  static const bool likeButtonEnabled = false;
 }

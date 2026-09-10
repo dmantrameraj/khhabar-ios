@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/config/feature_flags.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
@@ -126,20 +127,21 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
       appBar: AppBar(
         actions: [
           if (_detail != null) ...[
-            IconButton(
-              tooltip: _detail!.liked ? 'Unlike' : 'Like',
-              icon: _togglingLike
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      _detail!.liked ? Icons.favorite : Icons.favorite_border,
-                      color: _detail!.liked ? AppTheme.accent : null,
-                    ),
-              onPressed: _toggleLike,
-            ),
+            if (FeatureFlags.likeButtonEnabled)
+              IconButton(
+                tooltip: _detail!.liked ? 'Unlike' : 'Like',
+                icon: _togglingLike
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _detail!.liked ? Icons.favorite : Icons.favorite_border,
+                        color: _detail!.liked ? AppTheme.accent : null,
+                      ),
+                onPressed: _toggleLike,
+              ),
             IconButton(
               tooltip: _detail!.bookmarked ? 'Remove bookmark' : 'Save article',
               icon: _togglingBookmark

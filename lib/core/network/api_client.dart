@@ -72,19 +72,23 @@ class ApiClient {
     }
   }
 
-  /// POST with a multipart/form-data body — for the one endpoint that
-  /// takes a file upload (the reporter's article photo). [fields] become
-  /// plain form fields; [file], if given, is attached under [fileField].
+  /// POST with a multipart/form-data body — for endpoints that take a file
+  /// upload (the reporter's article photo, a profile avatar). [fields]
+  /// become plain form fields; [file], if given, is attached under
+  /// [fileField]; [extraFiles] attaches any additional named files (e.g.
+  /// a reporter's inline article photos) alongside it.
   Future<(dynamic, Map<String, dynamic>)> postMultipart(
     String path, {
     required Map<String, dynamic> fields,
     MultipartFile? file,
     String fileField = 'featured_image',
+    Map<String, MultipartFile>? extraFiles,
   }) async {
     try {
       final formData = FormData.fromMap({
         ...fields,
         if (file != null) fileField: file,
+        ...?extraFiles,
       });
       final response = await _dio.post(path, data: formData, options: _authOptions);
       return _unwrap(response);

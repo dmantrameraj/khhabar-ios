@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/api_client.dart';
 import '../models/paginated_result.dart';
+import '../models/reporter_earnings.dart';
 import '../models/reporter_submission.dart';
 
 /// The reporter-only "file a story from the field" feature — mirrors the
@@ -28,19 +29,35 @@ class ReporterRepository {
   }
 
   /// [imagePath] is a local file path (from image_picker) — required,
-  /// matching the backend's validation.
+  /// matching the backend's validation. [extraImagePaths] is 0-2 more
+  /// photos the backend splices evenly between paragraphs (see
+  /// ReporterApiController::buildContentHtml()) — there's no rich-text
+  /// editor on mobile to place them precisely.
   Future<ReporterSubmission> submit({
     required String title,
     required String content,
     required int categoryId,
     required String imagePath,
+    List<String> extraImagePaths = const [],
   }) async {
     final file = await MultipartFile.fromFile(imagePath, filename: imagePath.split(RegExp(r'[\\/]')).last);
+    final extraFiles = <String, MultipartFile>{};
+    for (var i = 0; i < extraImagePaths.length && i < 2; i++) {
+      final path = extraImagePaths[i];
+      extraFiles['extra_image_${i + 1}'] =
+          await MultipartFile.fromFile(path, filename: path.split(RegExp(r'[\\/]')).last);
+    }
     final (data, _) = await _client.postMultipart(
       'reporter/news',
       fields: {'title': title, 'content': content, 'category_id': categoryId},
       file: file,
+      extraFiles: extraFiles,
     );
     return ReporterSubmission.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<ReporterEarnings> getEarnings() async {
+    final (data, _) = await _client.get('reporter/earnings');
+    return ReporterEarnings.fromJson(data as Map<String, dynamic>);
   }
 }

@@ -27,6 +27,10 @@ class _ReporterSubmitScreenState extends ConsumerState<ReporterSubmitScreen> {
   final _contentController = TextEditingController();
   CategoryNode? _category;
   File? _image;
+  // Up to 2 extra photos placed inline — no rich-text editor on mobile to
+  // insert at a cursor position, so the backend spaces these evenly
+  // between the paragraphs already written (see ReporterApiController).
+  final List<File?> _extraImages = [null, null];
   bool _submitting = false;
 
   @override
@@ -40,6 +44,13 @@ class _ReporterSubmitScreenState extends ConsumerState<ReporterSubmitScreen> {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
     if (picked != null) {
       setState(() => _image = File(picked.path));
+    }
+  }
+
+  Future<void> _pickExtraImage(int index) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+    if (picked != null) {
+      setState(() => _extraImages[index] = File(picked.path));
     }
   }
 
@@ -63,6 +74,7 @@ class _ReporterSubmitScreenState extends ConsumerState<ReporterSubmitScreen> {
             content: _contentController.text.trim(),
             categoryId: _category!.id,
             imagePath: _image!.path,
+            extraImagePaths: _extraImages.whereType<File>().map((f) => f.path).toList(),
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +97,42 @@ class _ReporterSubmitScreenState extends ConsumerState<ReporterSubmitScreen> {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  Widget _extraImagePicker(int index) {
+    final image = _extraImages[index];
+    return GestureDetector(
+      onTap: _submitting ? null : () => _pickExtraImage(index),
+      child: Container(
+        height: 90,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+          image: image != null ? DecorationImage(image: FileImage(image), fit: BoxFit.cover) : null,
+        ),
+        child: Stack(
+          children: [
+            if (image == null)
+              Center(
+                child: Icon(Icons.add_photo_alternate_outlined, size: 28, color: Colors.grey.shade600),
+              ),
+            if (image != null)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: GestureDetector(
+                  onTap: () => setState(() => _extraImages[index] = null),
+                  child: const CircleAvatar(
+                    radius: 11,
+                    backgroundColor: Colors.black54,
+                    child: Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -148,6 +196,24 @@ class _ReporterSubmitScreenState extends ConsumerState<ReporterSubmitScreen> {
               minLines: 8,
               maxLines: 20,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'खबर लिखें' : null,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'खबर के बीच में फ़ोटो (वैकल्पिक)',
+              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ये फ़ोटो आपकी लिखी हुई खबर के पैराग्राफ़ के बीच अपने आप लगा दी जाएँगी।',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _extraImagePicker(0)),
+                const SizedBox(width: 10),
+                Expanded(child: _extraImagePicker(1)),
+              ],
             ),
             const SizedBox(height: 20),
             FilledButton(

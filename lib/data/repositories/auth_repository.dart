@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import '../models/auth_user.dart';
 
@@ -56,6 +58,25 @@ class AuthRepository {
 
   Future<AuthUser> me() async {
     final (data, _) = await _client.get('auth/me');
+    return AuthUser.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// [avatarPath] is a local file path (from image_picker) — optional,
+  /// unlike the reporter submission's required photo.
+  Future<AuthUser> updateProfile({
+    required String name,
+    String? phone,
+    String? avatarPath,
+  }) async {
+    final file = avatarPath != null
+        ? await MultipartFile.fromFile(avatarPath, filename: avatarPath.split(RegExp(r'[\\/]')).last)
+        : null;
+    final (data, _) = await _client.postMultipart(
+      'auth/profile',
+      fields: {'name': name, if (phone != null) 'phone': phone},
+      file: file,
+      fileField: 'avatar',
+    );
     return AuthUser.fromJson(data as Map<String, dynamic>);
   }
 

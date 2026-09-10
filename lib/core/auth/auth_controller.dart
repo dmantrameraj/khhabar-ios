@@ -63,6 +63,20 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     return result.user;
   }
 
+  /// Requires an active session (called from EditProfileScreen, which is
+  /// only ever reachable while signed in) — updates the server, then
+  /// replaces the in-memory user so every screen watching
+  /// authControllerProvider (Account, AppBar, etc.) picks up the new
+  /// name/phone/avatar immediately without a manual refresh.
+  Future<void> updateProfile({required String name, String? phone, String? avatarPath}) async {
+    final updated = await ref.read(authRepositoryProvider).updateProfile(
+          name: name,
+          phone: phone,
+          avatarPath: avatarPath,
+        );
+    state = AsyncData(updated);
+  }
+
   Future<void> logout() async {
     try {
       await ref.read(authRepositoryProvider).logout();
