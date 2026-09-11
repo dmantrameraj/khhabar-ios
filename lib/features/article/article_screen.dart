@@ -10,8 +10,10 @@ import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/html_to_text.dart';
 import '../../core/utils/whatsapp_share.dart';
 import '../../data/models/article_detail.dart';
+import '../../widgets/article_narration_player.dart';
 import '../../widgets/news_card.dart';
 import '../auth/login_screen.dart';
 import '../search/search_screen.dart';
@@ -233,6 +235,7 @@ class _ArticleContent extends StatelessWidget {
                 ],
               ),
               const Divider(height: 32),
+              ArticleNarrationPlayer(plainText: htmlToPlainText(detail.content)),
               Html(
                 data: detail.content,
                 style: {

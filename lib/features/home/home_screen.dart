@@ -42,18 +42,22 @@ class HomeScreen extends ConsumerWidget {
       length: 1 + categories.length,
       child: Scaffold(
         appBar: AppBar(
-          // Two-tone wordmark ("ख" in the brand accent, "बर" in white) per
-          // the user's reference design — plain styled text rather than an
-          // image, so there's no extra asset to keep in sync with the app
-          // icon and no image ever fails to load in the header.
-          title: const Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'ख', style: TextStyle(color: AppTheme.accent)),
-                TextSpan(text: 'बर', style: TextStyle(color: Colors.white)),
-              ],
+          // The real wordmark image, per request — replaces the earlier
+          // styled-text version. The source PNG has an opaque white
+          // background baked in (not transparent), so it's wrapped in a
+          // matching white badge rather than placed directly on the navy
+          // bar, which would otherwise show as an ugly white rectangle.
+          title: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
             ),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 26),
+            child: Image.asset(
+              'assets/splash/khhabar_splash_logo.png',
+              height: 28,
+              fit: BoxFit.contain,
+            ),
           ),
           centerTitle: true,
           actions: [
@@ -79,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             tabs: [
-              const Tab(text: 'होम'),
+              const Tab(text: 'Home'),
               ...categories.map((c) => Tab(text: c.name)),
             ],
           ),

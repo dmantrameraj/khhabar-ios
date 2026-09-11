@@ -49,6 +49,7 @@ dependencies:
   google_mobile_ads: ^9.1.0 # AdMob banner ads — separate revenue channel from the website's own self-served ad system
   font_awesome_flutter: ^11.0.0 # real WhatsApp brand icon for the share buttons (Material Icons has no brand glyphs)
   image_picker: ^1.1.2 # reporter's "attach a photo" field on the submit-article screen
+  flutter_tts: ^4.2.0 # "Listen to this article" narration — the app-side equivalent of the website's Web Speech API player
 
 dev_dependencies:
   flutter_test:
@@ -110,11 +111,14 @@ flutter:
 
   # assets/icon/khhabar_logo.png is only used as flutter_launcher_icons'
   # build-time source (see the config block above) — not declared as a
-  # runtime asset since nothing in the app displays it directly; the
-  # header uses styled text instead (see HomeScreen's AppBar title).
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # runtime asset since nothing in the app displays it directly.
+  #
+  # assets/splash/khhabar_splash_logo.png IS a runtime asset (in addition
+  # to being flutter_native_splash's source) — it's the same wordmark
+  # shown in Home's AppBar (wrapped in a white badge; the source PNG has
+  # an opaque white background baked in, not transparent, so it needs one).
+  assets:
+    - assets/splash/khhabar_splash_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
