@@ -10,9 +10,12 @@ import '../core/theme/app_theme.dart';
 /// tree would need a full custom text renderer instead, for a feature
 /// that mainly matters to someone actively looking at the screen —
 /// exactly the case where they'd just read the article instead of
-/// listening. Play/pause/resume/stop, speed, and voice (Indian voices
-/// preferred, matching the website) carry the actual value: listening
-/// while doing something else.
+/// listening.
+///
+/// Unlike the website (which offers a full voice picker), this always
+/// narrates in Hindi (India) — a fixed choice per request, not a
+/// per-article default the reader can change. Play/pause/resume/stop
+/// and speed are still adjustable; there's no voice dropdown.
 class ArticleNarrationPlayer extends StatefulWidget {
   final String plainText;
 
@@ -24,29 +27,12 @@ class ArticleNarrationPlayer extends StatefulWidget {
 
 enum _PlayState { idle, playing, paused }
 
-/// Major Indian language codes, most-relevant-for-Hindi-news-first —
-/// matches ArticleNarrator.INDIAN_LANG_PREFIXES on the website exactly,
-/// so the voice picker sorts the same way in both places.
-const _indianLocalePrefixes = [
-  'hi-IN',
-  'en-IN',
-  'bn-IN',
-  'ta-IN',
-  'te-IN',
-  'mr-IN',
-  'gu-IN',
-  'kn-IN',
-  'ml-IN',
-  'pa-IN',
-  'ur-IN',
-];
+const _hindiIndiaLocale = 'hi-IN';
 
 class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
   final FlutterTts _tts = FlutterTts();
   _PlayState _state = _PlayState.idle;
   double _rate = 1.0;
-  List<Map<String, String>> _voices = [];
-  Map<String, String>? _voice;
   bool _supported = true;
 
   @override
@@ -75,58 +61,37 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
       if (mounted) setState(() => _state = _PlayState.idle);
     });
     await _tts.awaitSpeakCompletion(true);
+    await _setHindiVoice();
+  }
 
+  /// Always narrates in Hindi (India), regardless of the article's own
+  /// language field. Tries to pick an exact hi-IN *voice* first (more
+  /// natural-sounding on devices that ship more than one Hindi voice);
+  /// setLanguage('hi-IN') alone is a safe fallback every Android TTS
+  /// engine understands even without a distinct voice for it.
+  Future<void> _setHindiVoice() async {
     try {
       final raw = await _tts.getVoices;
-      final voices = <Map<String, String>>[];
       if (raw is List) {
         for (final v in raw) {
           if (v is Map) {
-            final name = v['name']?.toString();
-            final locale = v['locale']?.toString();
-            if (name != null && locale != null) {
-              voices.add({'name': name, 'locale': locale});
+            final locale = v['locale']?.toString().toLowerCase();
+            if (locale == _hindiIndiaLocale.toLowerCase()) {
+              await _tts.setVoice({'name': v['name'].toString(), 'locale': v['locale'].toString()});
+              return;
             }
           }
         }
       }
-
-      final indian = voices.where(_isIndianVoice).toList();
-      final others = voices.where((v) => !_isIndianVoice(v)).toList();
-      final sorted = [...indian, ...others];
-
-      final preferredPrefix = _isPrimarilyHindi(widget.plainText) ? 'hi-IN' : 'en-IN';
-      var defaultVoice = sorted.firstWhere(
-        (v) => v['locale']!.toLowerCase().startsWith(preferredPrefix.toLowerCase()),
-        orElse: () => sorted.firstWhere(_isIndianVoice, orElse: () => <String, String>{}),
-      );
-      if (defaultVoice.isEmpty) {
-        defaultVoice = sorted.isNotEmpty ? sorted.first : <String, String>{};
-      }
-
-      if (mounted) {
-        setState(() {
-          _voices = sorted;
-          _voice = defaultVoice.isEmpty ? null : defaultVoice;
-        });
-      }
-      if (defaultVoice.isNotEmpty) {
-        await _tts.setVoice(defaultVoice);
-      }
     } catch (_) {
-      // No voices available on this device — narration still works with
-      // whatever the platform default is, just no picker to show.
+      // Fall through to setLanguage below.
     }
-  }
-
-  bool _isIndianVoice(Map<String, String> v) {
-    final locale = v['locale']?.toLowerCase() ?? '';
-    return _indianLocalePrefixes.any((p) => locale.startsWith(p.toLowerCase()));
-  }
-
-  bool _isPrimarilyHindi(String text) {
-    final devanagari = RegExp(r'[ऀ-ॿ]').allMatches(text).length;
-    return text.isNotEmpty && devanagari > text.length * 0.15;
+    try {
+      await _tts.setLanguage(_hindiIndiaLocale);
+    } catch (_) {
+      // No Hindi language pack on this device — TTS still speaks in
+      // whatever the platform default is rather than not working at all.
+    }
   }
 
   @override
@@ -139,9 +104,6 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
     if (widget.plainText.trim().isEmpty) return;
     try {
       await _tts.setSpeechRate(_rate);
-      if (_voice != null) {
-        await _tts.setVoice(_voice!);
-      }
       await _tts.speak(widget.plainText);
     } catch (_) {
       if (mounted) {
@@ -173,76 +135,41 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.navy.withValues(alpha: 0.15)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              _PlayButton(state: _state, onPlay: _play, onPause: _pause, onResume: _resume, onStop: _stop),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text('इस खबर को सुनें', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              ),
-              if (_state != _PlayState.idle)
-                IconButton(
-                  icon: const Icon(Icons.stop_circle_outlined, size: 22),
-                  tooltip: 'रोकें',
-                  onPressed: _stop,
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
+          _PlayButton(state: _state, onPlay: _play, onPause: _pause, onResume: _resume, onStop: _stop),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('इस खबर को सुनें', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<double>(
-                    value: _rate,
-                    isDense: true,
-                    isExpanded: true,
-                    items: const [0.75, 1.0, 1.25, 1.5, 2.0]
-                        .map((r) => DropdownMenuItem(value: r, child: Text('${r}x गति')))
-                        .toList(),
-                    onChanged: (r) async {
-                      if (r == null) return;
-                      setState(() => _rate = r);
-                      if (_state != _PlayState.idle) {
-                        await _tts.setSpeechRate(r);
-                        await _play();
-                      }
-                    },
-                  ),
-                ),
+          SizedBox(
+            width: 92,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<double>(
+                value: _rate,
+                isDense: true,
+                isExpanded: true,
+                items: const [0.75, 1.0, 1.25, 1.5, 2.0]
+                    .map((r) => DropdownMenuItem(value: r, child: Text('${r}x')))
+                    .toList(),
+                onChanged: (r) async {
+                  if (r == null) return;
+                  setState(() => _rate = r);
+                  if (_state != _PlayState.idle) {
+                    await _tts.setSpeechRate(r);
+                    await _play();
+                  }
+                },
               ),
-              if (_voices.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<Map<String, String>>(
-                      value: _voice,
-                      isDense: true,
-                      isExpanded: true,
-                      items: _voices
-                          .map((v) => DropdownMenuItem(
-                                value: v,
-                                child: Text('${v['name']} (${v['locale']})', overflow: TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (v) async {
-                        if (v == null) return;
-                        setState(() => _voice = v);
-                        await _tts.setVoice(v);
-                        if (_state != _PlayState.idle) {
-                          await _play();
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
+          if (_state != _PlayState.idle)
+            IconButton(
+              icon: const Icon(Icons.stop_circle_outlined, size: 22),
+              tooltip: 'रोकें',
+              onPressed: _stop,
+              visualDensity: VisualDensity.compact,
+            ),
         ],
       ),
     );

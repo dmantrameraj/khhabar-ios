@@ -10,7 +10,11 @@ import '../data/models/news_article.dart';
 /// WhatsApp's own brand green, used behind the real logo glyph below.
 const _whatsappGreen = Color(0xFF25D366);
 
-/// Large hero card — top story on the home screen.
+/// Large hero card — top story on the home screen. Headline is overlaid
+/// on the image itself (dark gradient scrim behind white text), matching
+/// the magazine-cover style of the reference apps this project follows —
+/// see also NewsFeedCard, which uses the same treatment for the
+/// continuous "ताजा खबर" list.
 class NewsHeroCard extends StatelessWidget {
   final NewsArticle article;
   final VoidCallback onTap;
@@ -26,64 +30,195 @@ class NewsHeroCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (article.featuredImage != null)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: CachedNetworkImage(
-                  imageUrl: article.featuredImage!,
-                  fit: BoxFit.cover,
-                  placeholder: (c, u) => Container(color: Colors.grey.shade300),
-                  errorWidget: (c, u, e) =>
-                      Container(color: Colors.grey.shade300, child: const Icon(Icons.broken_image)),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  if (article.isBreaking)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      margin: const EdgeInsets.only(bottom: 6),
-                      decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(4)),
-                      child: const Text(
-                        'LIVE',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  if (article.featuredImage != null)
+                    CachedNetworkImage(
+                      imageUrl: article.featuredImage!,
+                      fit: BoxFit.cover,
+                      placeholder: (c, u) => Container(color: Colors.grey.shade300),
+                      errorWidget: (c, u, e) =>
+                          Container(color: Colors.grey.shade300, child: const Icon(Icons.broken_image)),
+                    )
+                  else
+                    Container(color: AppTheme.navy),
+                  // Gradient scrim so white overlay text stays readable
+                  // regardless of what's underneath it in the photo.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                        stops: [0.4, 1.0],
                       ),
                     ),
-                  Text(
-                    article.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (article.isBreaking)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(4)),
+                            child: const Text(
+                              'LIVE',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        Text(
+                          article.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
                           '${article.category.name} · ${article.readingTimeMinutes} min read',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
                         ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 20),
+                    ),
+                  ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => Share.share(articleShareText(article.title, article.slug)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(Icons.share, color: Colors.grey.shade700, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-width card for a continuous feed (Home's "ताजा खबर") — same
+/// overlaid-headline treatment as NewsHeroCard, just a shorter image and
+/// no "LIVE" badge, since breaking-ness is already called out by the
+/// hero card at the top of the feed.
+class NewsFeedCard extends StatelessWidget {
+  final NewsArticle article;
+  final VoidCallback onTap;
+
+  const NewsFeedCard({super.key, required this.article, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (article.featuredImage != null)
+                    CachedNetworkImage(
+                      imageUrl: article.featuredImage!,
+                      fit: BoxFit.cover,
+                      placeholder: (c, u) => Container(color: Colors.grey.shade300),
+                      errorWidget: (c, u, e) =>
+                          Container(color: Colors.grey.shade300, child: const Icon(Icons.broken_image)),
+                    )
+                  else
+                    Container(color: AppTheme.navy),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                        stops: [0.45, 1.0],
                       ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
-                          child: FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 20),
+                    ),
+                  ),
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          article.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => Share.share(articleShareText(article.title, article.slug)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(Icons.share, color: Colors.grey.shade700, size: 18),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${article.category.name} · ${article.author.name}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const FaIcon(FontAwesomeIcons.whatsapp, color: _whatsappGreen, size: 20),
+                    tooltip: 'WhatsApp पर शेयर करें',
+                    onPressed: () => shareToWhatsApp(articleShareText(article.title, article.slug)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.share, color: Colors.grey.shade700, size: 18),
+                    tooltip: 'और शेयर विकल्प',
+                    onPressed: () => Share.share(articleShareText(article.title, article.slug)),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),

@@ -198,31 +198,73 @@ class _ArticleContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        if (a.featuredImage != null)
-          CachedNetworkImage(
-            imageUrl: a.featuredImage!,
-            width: double.infinity,
-            height: 220,
-            fit: BoxFit.cover,
-            placeholder: (c, u) => Container(height: 220, color: Colors.grey.shade300),
-            errorWidget: (c, u, e) => Container(height: 220, color: Colors.grey.shade300),
+        // Headline + category overlaid on the featured image (dark
+        // gradient scrim behind white text) — same treatment as
+        // NewsHeroCard/NewsFeedCard on Home, so an article's own page
+        // matches how it was presented in the feed the reader tapped it
+        // from. Sub-heading and the byline/meta row stay below the image
+        // as plain text — too much to fit legibly in an overlay.
+        SizedBox(
+          height: 240,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (a.featuredImage != null)
+                CachedNetworkImage(
+                  imageUrl: a.featuredImage!,
+                  fit: BoxFit.cover,
+                  placeholder: (c, u) => Container(color: Colors.grey.shade300),
+                  errorWidget: (c, u, e) => Container(color: Colors.grey.shade300),
+                )
+              else
+                Container(color: AppTheme.navy),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black87],
+                    stops: [0.35, 1.0],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      a.category.name.toUpperCase(),
+                      style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      a.title,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                a.category.name.toUpperCase(),
-                style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-              const SizedBox(height: 6),
-              Text(a.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               if (a.subHeading != null) ...[
-                const SizedBox(height: 6),
                 Text(a.subHeading!, style: TextStyle(fontSize: 15, color: Colors.grey.shade700)),
+                const SizedBox(height: 10),
               ],
-              const SizedBox(height: 10),
               Wrap(
                 spacing: 12,
                 runSpacing: 4,
@@ -231,7 +273,8 @@ class _ArticleContent extends StatelessWidget {
                   Text(formatArticleDate(a.publishedAt), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   Text('${a.readingTimeMinutes} min read', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   Text('${a.viewsCount} views', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                  Text('${a.likesCount} likes', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  if (FeatureFlags.likeButtonEnabled)
+                    Text('${a.likesCount} likes', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                 ],
               ),
               const Divider(height: 32),

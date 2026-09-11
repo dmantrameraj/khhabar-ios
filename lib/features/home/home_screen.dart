@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/category_node.dart';
 import '../../data/models/home_feed.dart';
+import '../../data/models/news_article.dart';
 import '../../data/repositories/location_repository.dart';
 import '../../widgets/category_feed_list.dart';
 import '../../widgets/news_card.dart';
@@ -59,7 +60,9 @@ class HomeScreen extends ConsumerWidget {
               fit: BoxFit.contain,
             ),
           ),
-          centerTitle: true,
+          // Left-aligned per request — sits above the "Home" tab's left
+          // edge rather than centered across the whole bar.
+          centerTitle: false,
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications_none),
@@ -90,7 +93,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            _HomeFeedTab(filteredByState: selectedState?.name),
+            const _HomeFeedTab(),
             ...categories.map((c) => CategoryFeedList(slug: c.slug)),
           ],
         ),
@@ -227,50 +230,202 @@ class _StatePickerSheetState extends ConsumerState<_StatePickerSheet> {
   }
 }
 
-/// The "होम" tab's content — hero/live-updates/trending/category-chips/
-/// latest, exactly what Home showed before the top category tabs existed.
-class _HomeFeedTab extends ConsumerWidget {
-  final String? filteredByState;
-
-  const _HomeFeedTab({this.filteredByState});
+/// The "Home" tab's content: a fixed header (sliders/hero/live-updates/
+/// trending, from the single GET /home call) followed by "ताजा खबर" —
+/// genuinely paginated via GET /news, loading continuously as the reader
+/// scrolls, all inside ONE CustomScrollView so "near the bottom" is
+/// detected across the whole tab, not just the paginated section.
+///
+/// Deliberately does NOT reuse /home's own `latest` array as page one of
+/// this pagination: /home and /news aren't guaranteed to share the exact
+/// same page size, so treating one as a continuation of the other risked
+/// duplicate or skipped articles at the seam. Instead this section is
+/// entirely self-contained, calling GET /news from page 1 on its own —
+/// same principle as CategoryFeedList, just embedded in a shared sliver
+/// scroll view instead of owning its own ListView.
+class _HomeFeedTab extends ConsumerStatefulWidget {
+  const _HomeFeedTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final homeFeed = ref.watch(homeFeedProvider);
-
-    return RefreshIndicator(
-      onRefresh: () => ref.refresh(homeFeedProvider.future),
-      child: homeFeed.when(
-        data: (feed) => _HomeContent(feed: feed, filteredByState: filteredByState),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => AsyncStateView(error: err, onRetry: () => ref.invalidate(homeFeedProvider)),
-      ),
-    );
-  }
+  ConsumerState<_HomeFeedTab> createState() => _HomeFeedTabState();
 }
 
-class _HomeContent extends StatelessWidget {
-  final HomeFeed feed;
-  final String? filteredByState;
+class _HomeFeedTabState extends ConsumerState<_HomeFeedTab> {
+  final ScrollController _scrollController = ScrollController();
+  final List<NewsArticle> _latest = [];
+  int _page = 1;
+  bool _hasNext = true;
+  bool _loadingMore = false;
+  bool _initialLoading = true;
+  Object? _latestError;
+  int? _stateId;
 
-  const _HomeContent({required this.feed, this.filteredByState});
+  @override
+  void initState() {
+    super.initState();
+    _stateId = ref.read(selectedStateProvider)?.id;
+    _scrollController.addListener(_onScroll);
+    _loadMore();
+  }
 
-  void _openArticle(BuildContext context, String slug) {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_hasNext || _loadingMore || !_scrollController.hasClients) return;
+    if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 400) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    setState(() => _loadingMore = true);
+    try {
+      final result = await ref.read(newsRepositoryProvider).getNews(page: _page, stateId: _stateId);
+      setState(() {
+        _latest.addAll(result.items);
+        _hasNext = result.hasNext;
+        _page++;
+        _latestError = null;
+      });
+    } catch (e) {
+      setState(() => _latestError = e);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingMore = false;
+          _initialLoading = false;
+        });
+      }
+    }
+  }
+
+  void _resetAndReload() {
+    setState(() {
+      _latest.clear();
+      _page = 1;
+      _hasNext = true;
+      _initialLoading = true;
+      _latestError = null;
+    });
+    _loadMore();
+  }
+
+  Future<void> _refresh() async {
+    ref.invalidate(homeFeedProvider);
+    _resetAndReload();
+  }
+
+  void _openArticle(String slug) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArticleScreen(slug: slug)));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (feed.hero == null && feed.latest.isEmpty) {
-      return EmptyStateView(
-        message: filteredByState != null ? '$filteredByState में अभी कोई खबर नहीं है।' : 'No news found.',
-      );
-    }
+    // The location filter lives outside this widget (Home's AppBar) —
+    // when it changes, this pagination has to restart from page 1 rather
+    // than silently keep appending pages fetched under the old filter.
+    ref.listen(selectedStateProvider, (previous, next) {
+      final newStateId = next?.id;
+      if (newStateId != _stateId) {
+        _stateId = newStateId;
+        _resetAndReload();
+      }
+    });
 
-    return ListView(
+    final homeFeed = ref.watch(homeFeedProvider);
+    final filteredByState = ref.watch(selectedStateProvider)?.name;
+    final heroSlug = homeFeed.valueOrNull?.hero?.slug;
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: homeFeed.when(
+              data: (feed) => _HomeHeader(feed: feed, onOpenArticle: _openArticle),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, _) => SizedBox(
+                height: 220,
+                child: AsyncStateView(error: err, onRetry: () => ref.invalidate(homeFeedProvider)),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SectionHeader(title: filteredByState != null ? '$filteredByState की ताजा खबर' : 'ताजा खबर'),
+          ),
+          if (_initialLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            )
+          else if (_latestError != null && _latest.isEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(height: 260, child: AsyncStateView(error: _latestError!, onRetry: _loadMore)),
+            )
+          else if (_latest.isEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 220,
+                child: EmptyStateView(
+                  message: filteredByState != null ? '$filteredByState में अभी कोई खबर नहीं है।' : 'No news found.',
+                ),
+              ),
+            )
+          else
+            SliverList.builder(
+              itemCount: _latest.length + (_hasNext ? 1 : 0),
+              itemBuilder: (context, i) {
+                if (i >= _latest.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final a = _latest[i];
+                // The newest article is very often both /home's hero AND
+                // page 1's first "latest" result (they're independently
+                // fetched — see the class doc — so there's no shared
+                // pagination cursor to simply skip it at the source).
+                // Hiding the duplicate here avoids showing the same
+                // headline twice in a row right under the hero card.
+                if (a.slug == heroSlug) {
+                  return const SizedBox.shrink();
+                }
+                return NewsFeedCard(article: a, onTap: () => _openArticle(a.slug));
+              },
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The fixed, non-paginated part of Home — sliders/hero/live-updates/
+/// trending, straight from the single GET /home call.
+class _HomeHeader extends StatelessWidget {
+  final HomeFeed feed;
+  final void Function(String slug) onOpenArticle;
+
+  const _HomeHeader({required this.feed, required this.onOpenArticle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (feed.sliders.isNotEmpty) SliderSection(sliders: feed.sliders),
-        if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => _openArticle(context, feed.hero!.slug)),
+        if (feed.hero != null) NewsHeroCard(article: feed.hero!, onTap: () => onOpenArticle(feed.hero!.slug)),
         if (FeatureFlags.liveUpdatesEnabled && feed.liveUpdates.isNotEmpty) _LiveUpdatesCard(updates: feed.liveUpdates),
         if (FeatureFlags.trendingNewsEnabled && feed.trending.isNotEmpty) const SectionHeader(title: 'ट्रेंडिंग न्यूज़'),
         if (FeatureFlags.trendingNewsEnabled && feed.trending.isNotEmpty)
@@ -282,15 +437,10 @@ class _HomeContent extends StatelessWidget {
               itemCount: feed.trending.length,
               itemBuilder: (context, i) {
                 final a = feed.trending[i];
-                return TrendingCard(article: a, rank: i + 1, onTap: () => _openArticle(context, a.slug));
+                return TrendingCard(article: a, rank: i + 1, onTap: () => onOpenArticle(a.slug));
               },
             ),
           ),
-        SectionHeader(title: filteredByState != null ? '$filteredByState की ताजा खबर' : 'ताजा खबर'),
-        ...feed.latest.map(
-          (a) => NewsListTile(article: a, onTap: () => _openArticle(context, a.slug)),
-        ),
-        const SizedBox(height: 24),
       ],
     );
   }
