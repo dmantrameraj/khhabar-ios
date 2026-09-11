@@ -65,6 +65,27 @@ dev_dependencies:
   # from one source image — dev-only, doesn't ship in the app itself.
   flutter_launcher_icons: ^0.14.3
 
+  # Generates the native splash screen — dev-only. A hand-edited
+  # launch_background.xml only covers Android <12; Android 12+ has its
+  # own system Splash Screen API that ignores that file entirely unless
+  # the app explicitly opts in via the android:windowSplashScreen* theme
+  # attributes, which this package generates correctly (including
+  # values-v31/styles.xml) for both cases in one step.
+  flutter_native_splash: ^2.4.3
+
+# Run `dart run flutter_native_splash:create` after changing
+# assets/splash/khhabar_splash_logo.png to regenerate — see
+# https://pub.dev/packages/flutter_native_splash.
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/splash/khhabar_splash_logo.png"
+  android_12:
+    color: "#FFFFFF"
+    image: "assets/splash/khhabar_splash_logo.png"
+  android: true
+  ios: false
+  web: false
+
 # Run `dart run flutter_launcher_icons` after changing assets/icon/khhabar_logo.png
 # to regenerate. See https://pub.dev/packages/flutter_launcher_icons.
 flutter_launcher_icons:

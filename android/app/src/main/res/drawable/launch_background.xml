@@ -1,17 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
-
-    <!-- Khhabar wordmark, shown briefly while the native Android process
-         starts, before Flutter's own first frame paints (see
-         android/app/src/main/res/values/styles.xml's LaunchTheme, which
-         points at this drawable). Source: drawable-nodpi/launch_logo.png
-         — nodpi so Android never up/downscales it per-density; it's
-         already a wide, single fixed-size image. -->
     <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/launch_logo" />
+        <bitmap android:gravity="fill" android:src="@drawable/background"/>
+    </item>
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash"/>
     </item>
 </layer-list>
