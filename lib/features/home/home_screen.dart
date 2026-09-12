@@ -23,8 +23,25 @@ final homeFeedProvider = FutureProvider<HomeFeed>((ref) {
 /// (होम + each category — swiping the body changes which one is showing,
 /// matching the reference apps). Same list feeds the reporter's category
 /// picker on the submit-article screen.
-final topCategoriesProvider = FutureProvider<List<CategoryNode>>((ref) {
-  return ref.watch(newsRepositoryProvider).getCategories();
+///
+/// These tabs are foundational navigation, not just one more widget on the
+/// page — if the very first GET /categories call hits a transient network
+/// blip (a phone flipping between wifi/cellular right as the app opens is a
+/// common real case) and nothing retries it, the app is left showing only
+/// "Home" for the rest of the session with no visible error and no way to
+/// recover short of a restart. Retry a couple of times before giving up;
+/// `_refresh()` (Home's pull-to-refresh) also invalidates this provider as
+/// a manual fallback.
+final topCategoriesProvider = FutureProvider<List<CategoryNode>>((ref) async {
+  final repo = ref.watch(newsRepositoryProvider);
+  for (var attempt = 0; ; attempt++) {
+    try {
+      return await repo.getCategories();
+    } catch (_) {
+      if (attempt >= 2) rethrow;
+      await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+    }
+  }
 });
 
 class HomeScreen extends ConsumerWidget {
@@ -316,6 +333,9 @@ class _HomeFeedTabState extends ConsumerState<_HomeFeedTab> {
 
   Future<void> _refresh() async {
     ref.invalidate(homeFeedProvider);
+    // Also retries the category tabs — see topCategoriesProvider's doc for
+    // why they're worth an explicit recovery path here.
+    ref.invalidate(topCategoriesProvider);
     _resetAndReload();
   }
 
