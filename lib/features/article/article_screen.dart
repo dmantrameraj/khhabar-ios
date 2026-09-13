@@ -283,8 +283,45 @@ class _ArticleContent extends StatelessWidget {
                 data: detail.content,
                 style: {
                   'body': Style(margin: Margins.zero, fontSize: FontSize(15), lineHeight: LineHeight(1.6)),
-                  'img': Style(width: Width(double.infinity)),
                 },
+                // A reporter/editor can splice photos mid-article (see
+                // ReporterApiController::buildContentHtml() and CKEditor on
+                // the website) as a lone <img> inside its own <p>. Styling
+                // 'img' with `Width(double.infinity)` (the previous
+                // approach) reads like ordinary CSS but isn't: flutter_html
+                // 3.0.0-beta.2's CssBoxWidget takes that value as a literal
+                // *minWidth* constraint, not "fill available width", which
+                // throws "BoxConstraints forces an infinite width" the
+                // moment such an image is laid out — silently blanking the
+                // ENTIRE article body below it in a release build (no error
+                // shown; confirmed live via a real published article: only
+                // the header/title/meta rendered, nothing else). Rendering
+                // <img> ourselves via this extension — same
+                // CachedNetworkImage used everywhere else in the app, sized
+                // to an explicit finite width — sidesteps that broken path
+                // entirely rather than fighting flutter_html's CSS engine.
+                extensions: [
+                  ImageExtension(
+                    builder: (ctx) {
+                      final src = ctx.attributes['src'];
+                      if (src == null || src.isEmpty) return const SizedBox.shrink();
+                      final width = MediaQuery.of(ctx.buildContext!).size.width - 32;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: CachedNetworkImage(
+                            imageUrl: src,
+                            width: width,
+                            fit: BoxFit.cover,
+                            placeholder: (c, u) => Container(height: 200, width: width, color: Colors.grey.shade300),
+                            errorWidget: (c, u, e) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
               if (detail.media.isNotEmpty) ...[
                 const SizedBox(height: 16),
