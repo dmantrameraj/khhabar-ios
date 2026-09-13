@@ -29,10 +29,29 @@ enum _PlayState { idle, playing, paused }
 
 const _hindiIndiaLocale = 'hi-IN';
 
+/// The speed dropdown's options, expressed as real perceived multipliers
+/// (what "1x" actually sounds like) mapped to the `_rate` value flutter_tts
+/// itself needs to reach that speed. `flutter_tts.setSpeechRate()` takes a
+/// platform-agnostic 0.0 (slowest) – 1.0 (fastest) value, NOT "1.0 = normal
+/// speed" — this package previously passed the real multiplier straight
+/// through (e.g. 1.0 for "normal"), which on Android reached the native
+/// engine as `rate * 2.0` (see flutter_tts's own Android plugin code),
+/// i.e. literally double speed — exactly the "too fast" narration reported.
+/// iOS's native default (`AVSpeechUtteranceDefaultSpeechRate`) is ~0.5, so
+/// 0.5 is "normal" on both platforms; scaling every option by 0.5 here
+/// converts each real multiplier into the value flutter_tts actually wants.
+final _speedOptions = <double, String>{
+  0.375: '0.75x',
+  0.5: '1x',
+  0.625: '1.25x',
+  0.75: '1.5x',
+  1.0: '2x',
+};
+
 class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
   final FlutterTts _tts = FlutterTts();
   _PlayState _state = _PlayState.idle;
-  double _rate = 1.0;
+  double _rate = 0.5;
   bool _supported = true;
 
   @override
@@ -149,8 +168,8 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
                 value: _rate,
                 isDense: true,
                 isExpanded: true,
-                items: const [0.75, 1.0, 1.25, 1.5, 2.0]
-                    .map((r) => DropdownMenuItem(value: r, child: Text('${r}x')))
+                items: _speedOptions.entries
+                    .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                     .toList(),
                 onChanged: (r) async {
                   if (r == null) return;
