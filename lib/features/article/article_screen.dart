@@ -198,64 +198,37 @@ class _ArticleContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        // Headline + category overlaid on the featured image (dark
-        // gradient scrim behind white text) — same treatment as
-        // NewsHeroCard/NewsFeedCard on Home, so an article's own page
-        // matches how it was presented in the feed the reader tapped it
-        // from. Sub-heading and the byline/meta row stay below the image
-        // as plain text — too much to fit legibly in an overlay.
-        SizedBox(
-          height: 240,
-          child: Stack(
-            fit: StackFit.expand,
+        // Category + headline as plain text ABOVE the featured image —
+        // per explicit request, replacing an earlier overlay-on-image
+        // treatment (dark gradient scrim behind white text stacked on
+        // top of the photo). Reverted because it wasn't what was wanted:
+        // the title now reads before the image, not layered onto it.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (a.featuredImage != null)
-                CachedNetworkImage(
-                  imageUrl: a.featuredImage!,
-                  fit: BoxFit.cover,
-                  placeholder: (c, u) => Container(color: Colors.grey.shade300),
-                  errorWidget: (c, u, e) => Container(color: Colors.grey.shade300),
-                )
-              else
-                Container(color: AppTheme.navy),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black87],
-                    stops: [0.35, 1.0],
-                  ),
-                ),
+              Text(
+                a.category.name.toUpperCase(),
+                style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 12),
               ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 14,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      a.category.name.toUpperCase(),
-                      style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      a.title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 6),
+              Text(
+                a.title,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ],
           ),
         ),
+        if (a.featuredImage != null)
+          CachedNetworkImage(
+            imageUrl: a.featuredImage!,
+            width: double.infinity,
+            height: 220,
+            fit: BoxFit.cover,
+            placeholder: (c, u) => Container(height: 220, color: Colors.grey.shade300),
+            errorWidget: (c, u, e) => Container(height: 220, color: Colors.grey.shade300),
+          ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
