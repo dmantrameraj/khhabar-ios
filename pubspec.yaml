@@ -50,6 +50,7 @@ dependencies:
   font_awesome_flutter: ^11.0.0 # real WhatsApp brand icon for the share buttons (Material Icons has no brand glyphs)
   image_picker: ^1.1.2 # reporter's "attach a photo" field on the submit-article screen
   flutter_tts: ^4.2.0 # "Listen to this article" narration — the app-side equivalent of the website's Web Speech API player
+  shared_preferences: ^2.3.3 # plain-text local prefs — dark mode, article font size, favorite categories (nothing sensitive; auth token stays in flutter_secure_storage)
 
 dev_dependencies:
   flutter_test:

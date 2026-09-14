@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/config/feature_flags.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
+import '../../core/settings/user_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/html_to_text.dart';
@@ -186,14 +187,15 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
   }
 }
 
-class _ArticleContent extends StatelessWidget {
+class _ArticleContent extends ConsumerWidget {
   final ArticleDetail detail;
 
   const _ArticleContent({required this.detail});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final a = detail.article;
+    final fontScale = ref.watch(articleFontScaleProvider);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
@@ -255,7 +257,7 @@ class _ArticleContent extends StatelessWidget {
               Html(
                 data: detail.content,
                 style: {
-                  'body': Style(margin: Margins.zero, fontSize: FontSize(15), lineHeight: LineHeight(1.6)),
+                  'body': Style(margin: Margins.zero, fontSize: FontSize(fontScale.size), lineHeight: LineHeight(1.6)),
                 },
                 // A reporter/editor can splice photos mid-article (see
                 // ReporterApiController::buildContentHtml() and CKEditor on

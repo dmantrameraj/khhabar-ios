@@ -300,11 +300,20 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // AppTheme.navy is a near-black — fine as text on the light theme's
+    // pale background, but nearly invisible on the dark theme's own
+    // near-black background. Follow the active theme's own text color
+    // instead of hardcoding the brand navy here.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.navy),
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : AppTheme.navy,
+        ),
       ),
     );
   }

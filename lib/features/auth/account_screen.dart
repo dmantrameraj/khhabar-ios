@@ -1,18 +1,29 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_user.dart';
+import '../../widgets/location_picker.dart';
+import '../alerts/alerts_screen.dart';
 import '../reporter/reporter_earnings_screen.dart';
 import '../reporter/reporter_submissions_screen.dart';
 import '../reporter/reporter_submit_screen.dart';
+import '../settings/favorite_categories_screen.dart';
+import '../settings/font_size_sheet.dart';
+import '../settings/theme_mode_sheet.dart';
 import 'bookmarks_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
-import 'register_screen.dart';
+
+/// The Play Store package id (see android/app/build.gradle.kts's
+/// applicationId) — used for the "ऐप को रेटिंग दें" link. Resolves fine
+/// even before the app is published (Play Store just shows "not found"
+/// until then; the link itself needs no change once it goes live).
+const _playStorePackageId = 'com.khhabar.khhabar_app';
 
 /// The bottom-nav "Account" tab — signed-out prompt or signed-in profile,
 /// driven entirely by authControllerProvider so it always reflects the
@@ -24,9 +35,34 @@ class AccountScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    final user = authState.valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('प्रोफाइल')),
+      appBar: AppBar(
+        title: const Text('प्रोफाइल'),
+        // Compact login entry point, top-right — replaces the old
+        // full-width "Log In" button buried in the signed-out body, per
+        // request/reference design. Only shown while signed out; the
+        // signed-in view has its own profile card instead.
+        actions: [
+          if (user == null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  child: const Text('लॉगिन'),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: authState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -35,48 +71,97 @@ class AccountScreen extends ConsumerWidget {
             child: Text('Could not load your account. Please restart the app.\n$error', textAlign: TextAlign.center),
           ),
         ),
-        data: (user) => user == null ? _SignedOutView() : _SignedInView(user: user),
+        data: (user) => user == null ? const _SignedOutView() : _SignedInView(user: user),
       ),
     );
   }
 }
 
-class _SignedOutView extends StatelessWidget {
+/// Shown to every reader before they log in — not a login wall, a real,
+/// useful settings menu (matches what most news apps offer any fresh
+/// install) with login moved to the app bar instead of blocking this
+/// whole screen. The already-approved signed-in profile (`_SignedInView`
+/// below) is untouched by this — these are two entirely separate views.
+class _SignedOutView extends ConsumerWidget {
+  const _SignedOutView();
+
+  void _requireLogin(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.account_circle_outlined, size: 72, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            const Text(
-              'Log in to save articles, like news, and join the conversation.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _MenuGroup(items: [
+          _MenuItem(
+            icon: Icons.notifications_outlined,
+            iconColor: AppTheme.accent,
+            title: 'नोटिफिकेशन',
+            subtitle: 'ताज़ा अलर्ट देखें',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlertsScreen())),
+          ),
+          _MenuItem(
+            icon: Icons.dark_mode_outlined,
+            iconColor: AppTheme.navy,
+            title: 'डार्क मोड',
+            subtitle: 'लाइट, डार्क या सिस्टम के अनुसार',
+            onTap: () => openThemeModeSheet(context),
+          ),
+          _MenuItem(
+            icon: Icons.format_size,
+            iconColor: Colors.deepPurple,
+            title: 'आर्टिकल फ़ॉन्ट साइज़',
+            subtitle: 'पढ़ने का साइज़ छोटा, मध्यम या बड़ा करें',
+            onTap: () => openFontSizeSheet(context),
+          ),
+          _MenuItem(
+            icon: Icons.category_outlined,
+            iconColor: Colors.teal,
+            title: 'मेरा पसंदीदा विषय',
+            subtitle: 'पसंदीदा विषय होम पर सबसे पहले दिखेंगे',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoriteCategoriesScreen())),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _MenuGroup(items: [
+          _MenuItem(
+            icon: Icons.person_add_alt_outlined,
+            iconColor: Colors.green,
+            title: 'दोस्तों को इन्वाइट करें',
+            subtitle: 'Khhabar ऐप अपने दोस्तों के साथ शेयर करें',
+            onTap: () => Share.share('Khhabar पर ताज़ा खबरें पढ़ें: https://khhabar.com'),
+          ),
+          _MenuItem(
+            icon: Icons.star_outline,
+            iconColor: Colors.amber.shade800,
+            title: 'ऐप को रेटिंग दें',
+            subtitle: 'Play Store पर हमें रेट करें',
+            onTap: () => launchUrl(
+              Uri.parse('https://play.google.com/store/apps/details?id=$_playStorePackageId'),
+              mode: LaunchMode.externalApplication,
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
-                child: const Text('Log In'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () =>
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
-                child: const Text('Create Account'),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _MenuGroup(items: [
+          _MenuItem(
+            icon: Icons.location_on_outlined,
+            iconColor: AppTheme.accent,
+            title: 'अपना राज्य चुनें',
+            subtitle: 'अपने राज्य की खबरें देखें',
+            onTap: () => openLocationPicker(context, ref),
+          ),
+          _MenuItem(
+            icon: Icons.bookmark_outline,
+            iconColor: AppTheme.navy,
+            title: 'सेव आर्टिकल्स',
+            subtitle: 'सेव करने के लिए लॉगिन करें',
+            onTap: () => _requireLogin(context),
+          ),
+        ]),
+      ],
     );
   }
 }

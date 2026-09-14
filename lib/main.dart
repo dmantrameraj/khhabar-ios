@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/deep_link/deep_link_service.dart';
 import 'core/push/push_service.dart';
+import 'core/settings/user_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/shell/main_shell.dart';
 
@@ -24,12 +26,19 @@ void main() async {
     await MobileAds.instance.initialize();
   }
 
+  // Also awaited before runApp — theme mode (dark/light/system) has to be
+  // known on the very first frame, or the app would flash light-then-dark
+  // for anyone who picked dark mode.
+  final prefs = await SharedPreferences.getInstance();
+
   // An explicit, shared ProviderContainer (rather than a plain
   // ProviderScope, which keeps its container private to the widget tree)
   // so PushService can read/write the same providers — auth state, the
   // ApiClient's token — that the rest of the app uses, not a second,
   // disconnected instance of them.
-  final container = ProviderContainer();
+  final container = ProviderContainer(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+  );
 
   runApp(UncontrolledProviderScope(container: container, child: const KhhabarApp()));
 
@@ -43,16 +52,18 @@ void main() async {
   DeepLinkService.initialize();
 }
 
-class KhhabarApp extends StatelessWidget {
+class KhhabarApp extends ConsumerWidget {
   const KhhabarApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       navigatorKey: PushService.navigatorKey,
       title: 'Khhabar',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
       home: const MainShell(),
     );
   }

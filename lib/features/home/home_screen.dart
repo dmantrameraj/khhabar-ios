@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/feature_flags.dart';
 import '../../core/providers.dart';
+import '../../core/settings/user_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/category_node.dart';
 import '../../data/models/home_feed.dart';
 import '../../data/models/news_article.dart';
-import '../../data/repositories/location_repository.dart';
 import '../../widgets/category_feed_list.dart';
+import '../../widgets/location_picker.dart';
 import '../../widgets/news_card.dart';
 import '../../widgets/slider_section.dart';
 import '../alerts/alerts_screen.dart';
@@ -54,7 +55,18 @@ class HomeScreen extends ConsumerWidget {
     // tabs beside it pop in once GET /categories resolves (DefaultTabController
     // recreates itself when `length` changes) rather than blocking the
     // whole screen behind a spinner for a row that's secondary to the feed.
-    final categories = ref.watch(topCategoriesProvider).valueOrNull ?? const <CategoryNode>[];
+    final rawCategories = ref.watch(topCategoriesProvider).valueOrNull ?? const <CategoryNode>[];
+    // Categories the reader marked as favorite (Account -> "मेरा पसंदीदा
+    // विषय") sort first, right after Home — real personalization, not
+    // just a saved-but-inert preference. Relative order within each group
+    // (favorited / not) is left as the backend returns it.
+    final favoriteSlugs = ref.watch(favoriteCategoriesProvider);
+    final categories = favoriteSlugs.isEmpty
+        ? rawCategories
+        : [
+            ...rawCategories.where((c) => favoriteSlugs.contains(c.slug)),
+            ...rawCategories.where((c) => !favoriteSlugs.contains(c.slug)),
+          ];
 
     return DefaultTabController(
       length: 1 + categories.length,
@@ -84,15 +96,33 @@ class HomeScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.notifications_none),
               tooltip: 'अलर्ट',
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlertsScreen())),
             ),
             TextButton.icon(
-              onPressed: () => _openLocationPicker(context, ref),
+              onPressed: () => openLocationPicker(context, ref),
+              // AppBar only ever gives this actions row ~143px total
+              // (confirmed live: a RenderFlex overflow by ~9px at a
+              // 375px-wide screen with the button's default padding) —
+              // shrink the tap target/padding to Material's minimum
+              // rather than its default touch-friendly size, and cap the
+              // label's width so a long state name still ellipsizes
+              // instead of the row overflowing again.
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               icon: const Icon(Icons.location_on_outlined, color: Colors.white, size: 18),
-              label: Text(
-                selectedState?.name ?? 'सभी राज्य',
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
+              label: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 48),
+                child: Text(
+                  selectedState?.name ?? 'सभी राज्य',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ),
           ],
@@ -114,134 +144,6 @@ class HomeScreen extends ConsumerWidget {
             ...categories.map((c) => CategoryFeedList(slug: c.slug)),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _openLocationPicker(BuildContext context, WidgetRef ref) async {
-    final selected = await showModalBottomSheet<StateOption?>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _StatePickerSheet(),
-    );
-
-    // A null RETURN VALUE from the sheet means "cancelled" (user tapped
-    // outside or back) — distinct from selecting "All India", which the
-    // sheet signals with its own explicit sentinel below.
-    if (selected != _cancelled) {
-      ref.read(selectedStateProvider.notifier).state = selected;
-    }
-  }
-}
-
-/// Distinguishes "picker dismissed without choosing" from "explicitly
-/// chose All India" (both would otherwise pop null from the sheet).
-const _cancelled = StateOption(id: -1, name: '__cancelled__');
-
-class _StatePickerSheet extends ConsumerStatefulWidget {
-  const _StatePickerSheet();
-
-  @override
-  ConsumerState<_StatePickerSheet> createState() => _StatePickerSheetState();
-}
-
-class _StatePickerSheetState extends ConsumerState<_StatePickerSheet> {
-  final TextEditingController _searchController = TextEditingController();
-  List<StateOption>? _states;
-  Object? _error;
-  String _query = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final states = await ref.read(locationRepositoryProvider).getStates();
-      if (mounted) {
-        setState(() => _states = states);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = e);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final states = _states;
-    final filtered = states == null
-        ? const <StateOption>[]
-        : states.where((s) => s.name.toLowerCase().contains(_query.toLowerCase())).toList();
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('अपना राज्य चुनें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(_cancelled),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: const InputDecoration(
-                hintText: 'राज्य खोजें...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _error != null
-                ? Center(child: Text('राज्यों की सूची लोड नहीं हो सकी।\n$_error', textAlign: TextAlign.center))
-                : states == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView(
-                        controller: scrollController,
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.public, color: AppTheme.accent),
-                            title: const Text('सभी राज्य (All India)'),
-                            onTap: () => Navigator.of(context).pop(null),
-                          ),
-                          const Divider(height: 1),
-                          ...filtered.map(
-                            (s) => ListTile(
-                              title: Text(s.name),
-                              onTap: () => Navigator.of(context).pop(s),
-                            ),
-                          ),
-                        ],
-                      ),
-          ),
-        ],
       ),
     );
   }
