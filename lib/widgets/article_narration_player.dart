@@ -13,16 +13,19 @@ import '../core/theme/app_theme.dart';
 /// listening.
 ///
 /// Unlike the website (which offers a full voice picker), this always
-/// narrates in Assamese (India) — a fixed choice per explicit request
-/// (2026-09-14, overriding the earlier Hindi-only default), not a
+/// narrates in Hindi (India) — a fixed choice per request, not a
 /// per-article default the reader can change. Play/pause/resume/stop
-/// and speed are still adjustable; there's no voice dropdown. Most
-/// Android devices don't ship a distinct Assamese TTS voice, so in
-/// practice this usually falls through to `setLanguage('as-IN')`, which
-/// most engines either honor via a generic multi-language voice or
-/// silently fall back to their own default language for — narration
-/// still plays either way, just not guaranteed to sound Assamese on
-/// every device.
+/// and speed are still adjustable; there's no voice dropdown.
+///
+/// (Briefly switched to Assamese on 2026-09-14 per a specific request,
+/// then reverted the same day once real-device testing showed it
+/// produced no audible narration at all — most Android devices simply
+/// have no Assamese TTS voice or language data installed, unlike Hindi
+/// which ships with the OS's own TTS engine virtually everywhere. Hindi
+/// is what "hind native support lang" — the explicit ask that prompted
+/// the revert — actually means in practice: a language every device
+/// genuinely supports out of the box, not just a locale code that's
+/// technically valid.)
 class ArticleNarrationPlayer extends StatefulWidget {
   final String plainText;
 
@@ -34,7 +37,7 @@ class ArticleNarrationPlayer extends StatefulWidget {
 
 enum _PlayState { idle, playing, paused }
 
-const _narrationLocale = 'as-IN';
+const _narrationLocale = 'hi-IN';
 
 /// The speed dropdown's options, expressed as real perceived multipliers
 /// (what "1x" actually sounds like) mapped to the `_rate` value flutter_tts
@@ -90,10 +93,11 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
     await _setNarrationVoice();
   }
 
-  /// Always narrates in Assamese (India), regardless of the article's own
-  /// language field. Tries to pick an exact as-IN *voice* first (more
-  /// natural-sounding on devices that ship one); setLanguage('as-IN')
-  /// alone is the fallback for engines with no distinct Assamese voice.
+  /// Always narrates in Hindi (India), regardless of the article's own
+  /// language field. Tries to pick an exact hi-IN *voice* first (more
+  /// natural-sounding on devices that ship more than one Hindi voice);
+  /// setLanguage('hi-IN') alone is a safe fallback every Android TTS
+  /// engine understands even without a distinct voice for it.
   Future<void> _setNarrationVoice() async {
     try {
       final raw = await _tts.getVoices;
@@ -114,7 +118,7 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
     try {
       await _tts.setLanguage(_narrationLocale);
     } catch (_) {
-      // No Assamese language pack on this device — TTS still speaks in
+      // No Hindi language pack on this device — TTS still speaks in
       // whatever the platform default is rather than not working at all.
     }
   }
