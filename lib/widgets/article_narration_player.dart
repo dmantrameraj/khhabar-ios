@@ -15,7 +15,11 @@ import '../core/theme/app_theme.dart';
 /// Unlike the website (which offers a full voice picker), this always
 /// narrates in Hindi (India) — a fixed choice per request, not a
 /// per-article default the reader can change. Play/pause/resume/stop
-/// and speed are still adjustable; there's no voice dropdown.
+/// and speed are still adjustable; there's no voice dropdown. Pitch is
+/// fixed slightly below neutral and voice selection prefers a
+/// network-backed voice when one exists (see `_pitch` and
+/// `_setNarrationVoice`), for a softer, calmer tone per a 2026-09-17
+/// request to sound less robotic/more like a natural assistant voice.
 ///
 /// (Briefly switched to Assamese on 2026-09-14 per a specific request,
 /// then reverted the same day once real-device testing showed it
@@ -64,6 +68,16 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
   double _rate = 0.5;
   bool _supported = true;
 
+  // A touch below flutter_tts's neutral 1.0, for a softer, calmer tone
+  // than the flat default most engines use — without going low enough to
+  // sound unnatural. Requested as "soft, easy-to-understand tone, like
+  // Gemini"; no on-device TTS engine actually sounds like a neural
+  // assistant voice, but pitch plus preferring the best-quality voice
+  // available (see _setNarrationVoice) is the real lever flutter_tts
+  // gives us for that. Not user-adjustable — same reasoning as the fixed
+  // narration language, this is a single default for every reader.
+  static const double _pitch = 0.9;
+
   @override
   void initState() {
     super.initState();
@@ -102,14 +116,29 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
     try {
       final raw = await _tts.getVoices;
       if (raw is List) {
+        Map? bestMatch;
         for (final v in raw) {
           if (v is Map) {
             final locale = v['locale']?.toString().toLowerCase();
             if (locale == _narrationLocale.toLowerCase()) {
-              await _tts.setVoice({'name': v['name'].toString(), 'locale': v['locale'].toString()});
-              return;
+              final name = v['name']?.toString().toLowerCase() ?? '';
+              // Android TTS engines commonly expose the same locale as
+              // both a "network" voice (Google's cloud-backed, natural-
+              // sounding synthesis) and a "local" one (the on-device
+              // fallback, noticeably more robotic). Prefer network when
+              // both exist -- otherwise take whichever hi-IN voice comes
+              // first.
+              if (name.contains('network')) {
+                bestMatch = v;
+                break;
+              }
+              bestMatch ??= v;
             }
           }
+        }
+        if (bestMatch != null) {
+          await _tts.setVoice({'name': bestMatch['name'].toString(), 'locale': bestMatch['locale'].toString()});
+          return;
         }
       }
     } catch (_) {
@@ -133,6 +162,7 @@ class _ArticleNarrationPlayerState extends State<ArticleNarrationPlayer> {
     if (widget.plainText.trim().isEmpty) return;
     try {
       await _tts.setSpeechRate(_rate);
+      await _tts.setPitch(_pitch);
       await _tts.speak(widget.plainText);
     } catch (_) {
       if (mounted) {
