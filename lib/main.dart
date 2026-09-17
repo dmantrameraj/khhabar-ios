@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/ads/ad_config.dart';
 import 'core/deep_link/deep_link_service.dart';
 import 'core/push/push_service.dart';
 import 'core/settings/user_preferences.dart';
@@ -21,8 +22,17 @@ void main() async {
   // implementations (no web) — guarded so this app still runs under
   // `flutter run -d web-server`, which is how this project verifies
   // changes locally (no Android emulator in this environment).
-  // BannerAdWidget carries the matching kIsWeb guard.
-  if (!kIsWeb) {
+  // BannerAdWidget carries the matching kIsWeb guard. Also gated on
+  // AdConfig.adsEnabled (2026-09-17, ahead of Play Store submission) —
+  // this used to run unconditionally, meaning the AdMob SDK contacted
+  // Google and the advertising ID was collected on every launch even
+  // though adsEnabled=false means no ad is ever actually requested or
+  // shown. No behavior change for a real user (ads are still off), just
+  // no longer collecting data for a feature nobody sees — one less
+  // thing to declare on the Play Console Data Safety form. Re-enabling
+  // ads later already means flipping AdConfig.adsEnabled to true; that
+  // same flip now also turns this init back on, no separate step needed.
+  if (!kIsWeb && AdConfig.adsEnabled) {
     await MobileAds.instance.initialize();
   }
 
