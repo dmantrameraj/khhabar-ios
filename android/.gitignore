@@ -6,6 +6,9 @@ gradle-wrapper.jar
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
+# Kotlin compiler scratch (build sessions / error dumps), regenerated
+# on every build — appeared untracked once Kotlin 2.x started writing it.
+/.kotlin/
 
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore

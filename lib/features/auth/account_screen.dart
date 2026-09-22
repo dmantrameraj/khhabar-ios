@@ -23,7 +23,17 @@ import 'login_screen.dart';
 /// applicationId) — used for the "ऐप को रेटिंग दें" link. Resolves fine
 /// even before the app is published (Play Store just shows "not found"
 /// until then; the link itself needs no change once it goes live).
-const _playStorePackageId = 'com.khhabar.khhabar_app';
+///
+/// Changed 2026-09-22: the original applicationId (com.khhabar.khhabar_app,
+/// the Flutter template default) didn't match com.khhabar.app, the package
+/// name already locked into the just-created Play Console listing — Play
+/// rejected every .aab upload over the mismatch. Package names lock
+/// permanently the moment an app is first registered in Play Console, so
+/// the app's applicationId had to change to match, not the other way
+/// around. Kept in sync with android/app/build.gradle.kts's applicationId
+/// and public/.well-known/assetlinks.json's package_name on the backend
+/// (App Links verification breaks if that file still names the old id).
+const _playStorePackageId = 'com.khhabar.app';
 
 /// The bottom-nav "Account" tab — signed-out prompt or signed-in profile,
 /// driven entirely by authControllerProvider so it always reflects the

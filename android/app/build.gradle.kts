@@ -28,8 +28,17 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.khhabar.khhabar_app"
+        // Changed 2026-09-22 from the Flutter template default
+        // (com.khhabar.khhabar_app) to match com.khhabar.app, the package
+        // name already locked into the Play Console listing at the moment
+        // the app was first registered there — that lock is permanent, so
+        // this had to move to match it, not the reverse. Keep this in sync
+        // with lib/features/auth/account_screen.dart's _playStorePackageId
+        // and the backend's public/.well-known/assetlinks.json
+        // (package_name) — both reference this same id, and App Links
+        // verification silently breaks if assetlinks.json falls out of
+        // sync with whatever this is set to.
+        applicationId = "com.khhabar.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
