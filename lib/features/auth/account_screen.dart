@@ -12,6 +12,7 @@ import '../alerts/alerts_screen.dart';
 import '../reporter/reporter_earnings_screen.dart';
 import '../reporter/reporter_submissions_screen.dart';
 import '../reporter/reporter_submit_screen.dart';
+import '../settings/contact_screen.dart';
 import '../settings/favorite_categories_screen.dart';
 import '../settings/font_size_sheet.dart';
 import '../settings/theme_mode_sheet.dart';
@@ -105,6 +106,17 @@ class _SignedOutView extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _MenuGroup(items: [
+          // Deliberately the FIRST item: Google Play rejected the app on
+          // 2026-09-24 under the News and Magazines policy for having no
+          // easy-to-find in-app contact page, so this must stay prominent
+          // and must not be moved down into a settings sub-menu.
+          _MenuItem(
+            icon: Icons.support_agent_outlined,
+            iconColor: AppTheme.accent,
+            title: 'संपर्क करें',
+            subtitle: 'ईमेल, फ़ोन और पता',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ContactScreen())),
+          ),
           _MenuItem(
             icon: Icons.notifications_outlined,
             iconColor: AppTheme.accent,
@@ -229,6 +241,16 @@ class _SignedInView extends ConsumerWidget {
             title: 'सेव की गई खबरें',
             subtitle: 'आपकी सेव की गई खबरें',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookmarksScreen())),
+          ),
+          // Mirrors the signed-out menu's contact entry — a signed-in
+          // reviewer must be able to reach contact details just as easily
+          // (see ContactScreen's doc comment for the policy background).
+          _MenuItem(
+            icon: Icons.support_agent_outlined,
+            iconColor: AppTheme.accent,
+            title: 'संपर्क करें',
+            subtitle: 'ईमेल, फ़ोन और पता',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ContactScreen())),
           ),
           _MenuItem(
             icon: Icons.privacy_tip_outlined,

@@ -244,7 +244,14 @@ class _ArticleContent extends ConsumerWidget {
                 spacing: 12,
                 runSpacing: 4,
                 children: [
-                  Text('By ${a.author.name}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                  // Author AND publisher, both named: Google Play's News
+                  // and Magazines policy requires "the source of news
+                  // articles including, but not limited to, the original
+                  // publisher or author". The author alone arguably met
+                  // that, but after the 2026-09-24 policy rejection this
+                  // spells out both so a reviewer can't miss it.
+                  Text('By ${a.author.name} · Khhabar',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                   Text(formatArticleDate(a.publishedAt), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   Text('${a.readingTimeMinutes} min read', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   Text('${a.viewsCount} views', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
