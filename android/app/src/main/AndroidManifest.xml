@@ -69,5 +69,42 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- REQUIRED for url_launcher to work at all on Android 11+ (API 30).
+             Package visibility filtering hides every other installed app
+             from this one unless the intent is declared here, so
+             launchUrl() simply could not resolve a browser/mail/dialer and
+             failed SILENTLY — no crash, no error, the tap just did nothing.
+
+             This was a real, long-standing bug: "प्राइवेसी और सुरक्षा" and
+             "ऐप को रेटिंग दें" in Account, the slider's external links, the
+             WhatsApp share, and the Contact screen's email/phone/website
+             rows were ALL dead on any Android 11+ device (this app targets
+             SDK 36, so that's effectively every user). Reported 2026-09-25.
+
+             Note the https entry is not optional just because the app uses
+             https links rather than custom schemes — whatsapp_share.dart
+             picked `wa.me` over `whatsapp://` specifically to dodge a
+             queries entry, but VIEW+https is filtered exactly the same way.
+
+             Scheme-per-need: https/http for web links (khhabar.com, wa.me,
+             play.google.com, slider links), mailto for the contact email,
+             tel for the contact phone number. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
     </queries>
 </manifest>
