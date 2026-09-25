@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # refuses any upload whose versionCode it has already seen — so this MUST
 # be incremented for every single submission, including a resubmission
 # after a policy rejection (1.0.0+1 was rejected 2026-09-24).
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: ^3.13.1

@@ -52,6 +52,17 @@ class DeepLinkService {
     final slug = extractArticleSlug(uri.toString());
     if (slug != null) {
       PushService.navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticleScreen(slug: slug)));
+      return;
     }
+
+    // A khhabar.com link this app can't route anywhere. Falling off the
+    // end of this method silently is what hid a real bug: the manifest's
+    // App Links filter claimed the WHOLE domain, so the app intercepted
+    // its own /page/privacy-policy link, arrived here, and did nothing —
+    // that menu row simply looked dead, with no error anywhere. The
+    // manifest now claims only /news/, so this should be unreachable in
+    // practice; logging it means that if some other path ever does start
+    // arriving here, it surfaces in `adb logcat` instead of vanishing.
+    debugPrint('DeepLinkService: ignoring unroutable link $uri (no article slug).');
   }
 }

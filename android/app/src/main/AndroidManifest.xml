@@ -41,7 +41,29 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="khhabar.com"/>
+                <!-- pathPrefix is REQUIRED, not decoration. Without it this
+                     filter claims EVERY khhabar.com URL, so the app becomes
+                     the OS-verified handler for its own website — and any
+                     launchUrl() to khhabar.com gets routed straight back
+                     into the app instead of a browser. DeepLinkService only
+                     understands /news/{slug} (extractArticleSlug returns
+                     null for anything else) and silently drops the rest, so
+                     "प्राइवेसी और सुरक्षा" and the Contact screen's website
+                     row looked completely dead: tap, app catches its own
+                     link, nothing happens, no error.
+
+                     Fixing assetlinks.json on 2026-09-25 made this worse,
+                     not better — once verification actually succeeded,
+                     Android stopped falling back to a browser chooser.
+
+                     /news/ is exactly what the app can handle, so that is
+                     exactly what it should claim. Anything else on the
+                     domain (/page/*, category pages, the site root) now
+                     correctly opens in a browser. If DeepLinkService ever
+                     learns to handle another path, add a second
+                     <data> pathPrefix here for it. Don't widen this back
+                     to the whole host. -->
+                <data android:scheme="https" android:host="khhabar.com" android:pathPrefix="/news/"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
